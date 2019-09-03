@@ -1,5 +1,6 @@
 package com.getIn.getCoin.getCoin;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.GsonBuilder;
 import kotlin.text.Charsets;
@@ -21,6 +22,15 @@ public class BlockChainUtils {
     public static <T> String serializeObjectToString(final T object) {
         try {
             return objectMapper.writeValueAsString(object);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException();
+        }
+    }
+
+    public static <K, V>HashMap<K, V> serializeStringToHashMap(final String data, final TypeReference typeReference) {
+        try {
+            return objectMapper.readValue(data, typeReference);
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException();
