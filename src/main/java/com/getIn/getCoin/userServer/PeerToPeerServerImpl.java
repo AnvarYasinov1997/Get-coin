@@ -1,9 +1,8 @@
 package com.getIn.getCoin.userServer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.getIn.getCoin.blockChain.BlockChain;
-import com.getIn.getCoin.blockChain.BlockChainImpl;
 import com.getIn.getCoin.dtos.*;
+import com.getIn.getCoin.getCoin.BlockChain;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -16,8 +15,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class PeerToPeerServerImpl implements PeerToPeerServer {
-
-    private static final String DEFAULT_BLOCKCHAIN_DIR = "Blockchain";
 
     private static final String DEFAULT_PARENT_FOLDER_DIR = "/home/anvar";
 
@@ -43,7 +40,7 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
         final PeerToPeerServer peerToPeerServer = new PeerToPeerServerImpl(
                 "1", "8081", "localhost",
                 "8080", "localhost",
-                new BlockChainImpl(DEFAULT_BLOCKCHAIN_DIR, DEFAULT_PARENT_FOLDER_DIR)
+                BlockChain.getInstance(DEFAULT_PARENT_FOLDER_DIR)
         );
         new Thread(peerToPeerServer::startServer).start();
         final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
@@ -113,7 +110,7 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
     private void validateCheckSum(final Socket clientSocket, final CheckSumDto dto) {
         boolean blockChainStatus = false;
         try {
-            blockChainStatus = blockChain.compareCheckSum(dto.getCheckSum());
+//            blockChainStatus = blockChain.compareCheckSum(dto.getCheckSum());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -147,7 +144,7 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
         if (RequestType.valueOf(networkNodesDto.getRequestType()) == RequestType.INITIALIZE) {
             final InitializeDto initializeDto = objectMapper.readValue(networkNodesDto.getDto(), InitializeDto.class);
             initializeDto.getUserDataList().forEach(it -> networkNodes.put(it.getUserId(), it));
-            blockChain.saveOrUpdateBlocks(initializeDto.getCheckSums(), initializeDto.getBlocks());
+//            blockChain.saveOrUpdateBlocks(initializeDto.getCheckSums(), initializeDto.getBlocks());
             this.executorService = Executors.newFixedThreadPool(networkNodes.size());
         } else throw new Exception("> Client has not be initialized");
         System.out.println("> Peer initialized...");
