@@ -32,31 +32,9 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private final Map<String, UserData> networkNodes = new ConcurrentHashMap<>();
+    private final Map<String, UserDto> networkNodes = new ConcurrentHashMap<>();
 
     private ExecutorService executorService;
-
-    public static void main(String[] args) throws Exception {
-        final PeerToPeerServer peerToPeerServer = new PeerToPeerServerImpl(
-                "1", "8081", "localhost",
-                "8080", "localhost",
-                BlockChain.getInstance(DEFAULT_PARENT_FOLDER_DIR)
-        );
-        new Thread(peerToPeerServer::startServer).start();
-        final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
-        boolean active = true;
-        while (active) {
-            System.out.println("> Insert data in format: (\"--payment -amount 100 -to 1)\"" +
-                    " where sum is amount is amount of coins for payment and to is user id...");
-            final String command = bufferedReader.readLine();
-            final List<String> arguments = Arrays.asList(command.split(" "));
-            final String key = arguments.get(0);
-            arguments.remove(0);
-            if (key.equals("--payment")) {
-
-            }
-        }
-    }
 
     public PeerToPeerServerImpl(final String userId,
                                 final String port,
@@ -71,6 +49,36 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
         this.mainServerSocket = new Socket(mainServerIpAddress, Integer.valueOf(mainServerPort));
         this.serverSocket = new ServerSocket(Integer.valueOf(this.port));
         this.initServer();
+    }
+
+    public static void main(String[] args) throws Exception {
+        final PeerToPeerServerImpl peerToPeerServer = new PeerToPeerServerImpl(
+                "1", "8081", "localhost",
+                "8080", "localhost",
+                BlockChain.getInstance(DEFAULT_PARENT_FOLDER_DIR)
+        );
+        new Thread(peerToPeerServer::startServer).start();
+        final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
+        System.out.println("> Insert data in format: (\"--transfer -amount 100 -to 1)\"" +
+                " where sum is amount is amount of coins for payment and to is user public key...");
+        boolean active = true;
+        while (active) {
+            final String command = bufferedReader.readLine();
+            final List<String> arguments = Arrays.asList(command.split(" "));
+            final String key = arguments.get(0);
+            arguments.remove(0);
+            switch (key) {
+                case "--mine": {
+                }
+                case "--transfer": {
+
+                }
+                case "--balance": {
+
+                }
+
+            }
+        }
     }
 
     @Override
@@ -133,7 +141,7 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
 
     private void initServer() throws Exception {
         final StringWriter stringWriter = new StringWriter();
-        objectMapper.writeValue(stringWriter, UserData.builder()
+        objectMapper.writeValue(stringWriter, UserDto.builder()
                 .userId(userId)
                 .port(port)
                 .ipAddress(ipAddress)
@@ -143,8 +151,7 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
         final NetworkNodesDto networkNodesDto = serializeNetworkNodesDto(mainServerSocket);
         if (RequestType.valueOf(networkNodesDto.getRequestType()) == RequestType.INITIALIZE) {
             final InitializeDto initializeDto = objectMapper.readValue(networkNodesDto.getDto(), InitializeDto.class);
-            initializeDto.getUserDataList().forEach(it -> networkNodes.put(it.getUserId(), it));
-//            blockChain.saveOrUpdateBlocks(initializeDto.getCheckSums(), initializeDto.getBlocks());
+
             this.executorService = Executors.newFixedThreadPool(networkNodes.size());
         } else throw new Exception("> Client has not be initialized");
         System.out.println("> Peer initialized...");

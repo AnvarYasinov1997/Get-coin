@@ -3,14 +3,17 @@ package com.getIn.getCoin.getCoin;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.getIn.getCoin.getCoin.json.BlockJson;
 import com.getIn.getCoin.getCoin.json.TransactionOutputJson;
+import javafx.util.Pair;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.Security;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 
@@ -34,12 +37,14 @@ public class BlockChain {
 
     private final List<Block> blockChain;
 
-    private final Queue<Transaction> waitTransactions;
+    private final List<Transaction> waitTransactions;
+
+    private final boolean mineActive = false;
 
     private BlockChain(final String parentFolderDir) {
         this.parentFolderDir = parentFolderDir;
         this.blockChain = new ArrayList<>();
-        this.waitTransactions = new ArrayDeque<>();
+        this.waitTransactions = new ArrayList<>();
     }
 
     public static BlockChain getInstance(final String parentFolderDir) {
@@ -66,13 +71,41 @@ public class BlockChain {
         Security.addProvider(new BouncyCastleProvider());
     }
 
-    public void mineBlock(final Block block) {
+    public Wallet generateNewWallet() {
+        final Pair<PublicKey, PrivateKey> keys = Wallet.createNewWallet();
+        System.out.println("> Public key: " + BlockChainUtils.getStringFromKey(keys.getKey()));
+        System.out.println("> Private key: " + BlockChainUtils.getStringFromKey(keys.getValue()));
+        return new Wallet(keys.getKey(), keys.getValue());
+    }
+
+    public List<Block> selectBlocks() {
+        return this.blockChain;
+    }
+
+    public List<TransactionOutput> selectUTXOs() {
+        final List<TransactionOutput> UTXOsList = new ArrayList<>();
+        for (final Map.Entry<String, TransactionOutput> it : UTXOs.entrySet()) {
+            UTXOsList.add(it.getValue());
+        }
+        return UTXOsList;
+    }
+
+    public Wallet getWallet(final String publicKey, final String privateKey) {
+        return new Wallet(publicKey, privateKey);
+    }
+
+    public boolean mineBlock(final Block block) {
         final String target = BlockChainUtils.getDifficultyString(this.difficulty);
-        while (!block.getHash().substring(0, this.difficulty).equals(target)) {
+        while (!block.getHash().substring(0, this.difficulty).equals(target) && mineActive) {
             block.incrementNonce();
             block.calculateHash();
         }
-        System.out.println("Block Mined!!! : " + block.getHash());
+        if (!mineActive) {
+            System.out.println("> Block Mined!!! : " + block.getHash());
+            return true;
+        }
+        System.out.println("> Mine stopped!!!");
+        return false;
     }
 
     private String getPathsByDir(final String dir) {

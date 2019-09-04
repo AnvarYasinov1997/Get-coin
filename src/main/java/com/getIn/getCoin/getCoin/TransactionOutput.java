@@ -1,5 +1,6 @@
 package com.getIn.getCoin.getCoin;
 
+import com.getIn.getCoin.dtos.TransactionOutputDto;
 import com.getIn.getCoin.getCoin.json.TransactionOutputJson;
 
 import java.security.PublicKey;
@@ -33,6 +34,11 @@ public class TransactionOutput {
     public TransactionOutputJson toTransactionOutputJson() {
         final String recipientString = BlockChainUtils.getStringFromKey(this.recipient);
         return new TransactionOutputJson(this.id, recipientString, this.parentTransactionId, this.amount);
+    }
+
+    public TransactionOutputDto toTransactionOutputDto() {
+        final String recipientString = BlockChainUtils.getStringFromKey(this.recipient);
+        return new TransactionOutputDto(this.id, recipientString, this.parentTransactionId, this.amount);
     }
 
     public boolean isMine(final PublicKey publicKey) {

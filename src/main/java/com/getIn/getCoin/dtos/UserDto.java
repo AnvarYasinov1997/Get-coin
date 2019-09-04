@@ -1,6 +1,6 @@
 package com.getIn.getCoin.dtos;
 
-public class UserData {
+public class UserDto {
 
     private String userId;
 
@@ -8,10 +8,10 @@ public class UserData {
 
     private String ipAddress;
 
-    public UserData() {
+    public UserDto() {
     }
 
-    public UserData(final String userId, final String port, final String ipAddress) {
+    public UserDto(final String userId, final String port, final String ipAddress) {
         this.userId = userId;
         this.port = port;
         this.ipAddress = ipAddress;
@@ -55,8 +55,8 @@ public class UserData {
         if (obj == null) return false;
         if (obj == this) return true;
         if (obj.getClass() != this.getClass()) return false;
-        UserData userData = (UserData) obj;
-        return this.userId.equals(userData.userId);
+        UserDto userDto = (UserDto) obj;
+        return this.userId.equals(userDto.userId);
     }
 
     public static class InternetAddressBuilder {
@@ -82,8 +82,8 @@ public class UserData {
             return this;
         }
 
-        public UserData build() {
-            return new UserData(userId, port, ipAddress);
+        public UserDto build() {
+            return new UserDto(userId, port, ipAddress);
         }
 
     }

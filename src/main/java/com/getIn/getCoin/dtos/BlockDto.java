@@ -1,21 +1,21 @@
-package com.getIn.getCoin.getCoin.json;
+package com.getIn.getCoin.dtos;
 
 import java.util.List;
 
-public class BlockJson {
+public class BlockDto {
 
     private String hash;
 
-    private BlockHeaderJson blockHeader;
+    private BlockHeaderDto blockHeader;
 
-    private List<TransactionJson> transactions;
+    private List<TransactionDto> transactions;
 
-    public BlockJson() {
+    public BlockDto() {
     }
 
-    public BlockJson(final String hash,
-                     final BlockHeaderJson blockHeader,
-                     final List<TransactionJson> transactions) {
+    public BlockDto(final String hash,
+                    final BlockHeaderDto blockHeader,
+                    final List<TransactionDto> transactions) {
         this.hash = hash;
         this.blockHeader = blockHeader;
         this.transactions = transactions;
@@ -29,23 +29,23 @@ public class BlockJson {
         this.hash = hash;
     }
 
-    public BlockHeaderJson getBlockHeader() {
+    public BlockHeaderDto getBlockHeader() {
         return blockHeader;
     }
 
-    public void setBlockHeader(BlockHeaderJson blockHeader) {
+    public void setBlockHeader(BlockHeaderDto blockHeader) {
         this.blockHeader = blockHeader;
     }
 
-    public List<TransactionJson> getTransactions() {
+    public List<TransactionDto> getTransactions() {
         return transactions;
     }
 
-    public void setTransactions(List<TransactionJson> transactions) {
+    public void setTransactions(List<TransactionDto> transactions) {
         this.transactions = transactions;
     }
 
-    public static class BlockHeaderJson {
+    public static class BlockHeaderDto {
 
         private Long nonce = 0L;
 
@@ -57,17 +57,13 @@ public class BlockJson {
 
         private Long transactionCount;
 
-        public BlockHeaderJson() {
+        public BlockHeaderDto() {
         }
 
-        public BlockHeaderJson(final Long nonce,
-                               final Long timestamp,
-                               final String merkleRoot,
-                               final String previousHash,
-                               final Long transactionCount) {
+        public BlockHeaderDto(Long nonce, Long timestamp, String merkleRoot, String previousHash, Long transactionCount) {
             this.nonce = nonce;
-            this.timestamp = timestamp;
             this.merkleRoot = merkleRoot;
+            this.timestamp = timestamp;
             this.previousHash = previousHash;
             this.transactionCount = transactionCount;
         }

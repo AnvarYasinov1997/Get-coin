@@ -1,5 +1,7 @@
 package com.getIn.getCoin.getCoin;
 
+import com.getIn.getCoin.dtos.BlockDto;
+import com.getIn.getCoin.dtos.TransactionDto;
 import com.getIn.getCoin.getCoin.json.BlockJson;
 import com.getIn.getCoin.getCoin.json.TransactionJson;
 
@@ -26,6 +28,11 @@ public class Block {
     public BlockJson toBlockJson() {
         final List<TransactionJson> transactionJsons = this.transactions.stream().map(Transaction::toTransactionJson).collect(Collectors.toList());
         return new BlockJson(this.hash, this.blockHeader.toBlockHeaderJson(), transactionJsons);
+    }
+
+    public BlockDto toBlockDto() {
+        final List<TransactionDto> transactionDtos = this.transactions.stream().map(Transaction::toTransactionDto).collect(Collectors.toList());
+        return new BlockDto(this.hash, this.blockHeader.toBlockHeaderDto(), transactionDtos);
     }
 
     public Block(final BlockJson blockJson) {
@@ -91,6 +98,10 @@ public class Block {
 
         public BlockJson.BlockHeaderJson toBlockHeaderJson() {
             return new BlockJson.BlockHeaderJson(this.nonce, this.timestamp, this.merkleRoot, this.previousHash, this.transactionCount);
+        }
+
+        public BlockDto.BlockHeaderDto toBlockHeaderDto() {
+            return new BlockDto.BlockHeaderDto(this.nonce, this.timestamp, this.merkleRoot, this.previousHash, this.transactionCount);
         }
 
         public void incrementNonce() {

@@ -4,50 +4,44 @@ import java.util.List;
 
 public class InitializeDto {
 
-    private List<UserData> userDataList;
+    private List<UserDto> userDtoList;
 
-    private List<Block> blocks;
+    private List<BlockDto> blockDtoList;
 
-    private List<String> checkSums;
+    private List<TransactionOutputDto> UTXOsDtoList;
 
     public InitializeDto() {
     }
 
-    public InitializeDto(final List<String> checkSums,
-                         final List<Block> blocks) {
-        this.blocks = blocks;
-        this.checkSums = checkSums;
+    public InitializeDto(final List<UserDto> userDtoList,
+                         final List<BlockDto> blockDtoList,
+                         final List<TransactionOutputDto> UTXOsDtoList) {
+        this.userDtoList = userDtoList;
+        this.blockDtoList = blockDtoList;
+        this.UTXOsDtoList = UTXOsDtoList;
     }
 
-    public InitializeDto(final List<UserData> userDataList,
-                         final List<Block> blocks,
-                         final List<String> checkSums) {
-        this.userDataList = userDataList;
-        this.blocks = blocks;
-        this.checkSums = checkSums;
+    public List<UserDto> getUserDtoList() {
+        return userDtoList;
     }
 
-    public List<UserData> getUserDataList() {
-        return userDataList;
+    public void setUserDtoList(List<UserDto> userDtoList) {
+        this.userDtoList = userDtoList;
     }
 
-    public void setUserDataList(List<UserData> userDataList) {
-        this.userDataList = userDataList;
+    public List<BlockDto> getBlockDtoList() {
+        return blockDtoList;
     }
 
-    public List<Block> getBlocks() {
-        return blocks;
+    public void setBlockDtoList(List<BlockDto> blockDtoList) {
+        this.blockDtoList = blockDtoList;
     }
 
-    public void setBlocks(List<Block> blocks) {
-        this.blocks = blocks;
+    public List<TransactionOutputDto> getUTXOsDtoList() {
+        return UTXOsDtoList;
     }
 
-    public List<String> getCheckSums() {
-        return checkSums;
-    }
-
-    public void setCheckSums(List<String> checkSums) {
-        this.checkSums = checkSums;
+    public void setUTXOsDtoList(List<TransactionOutputDto> UTXOsDtoList) {
+        this.UTXOsDtoList = UTXOsDtoList;
     }
 }

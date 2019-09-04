@@ -1,5 +1,8 @@
 package com.getIn.getCoin.getCoin;
 
+import com.getIn.getCoin.dtos.TransactionDto;
+import com.getIn.getCoin.dtos.TransactionInputDto;
+import com.getIn.getCoin.dtos.TransactionOutputDto;
 import com.getIn.getCoin.getCoin.json.TransactionInputJson;
 import com.getIn.getCoin.getCoin.json.TransactionJson;
 import com.getIn.getCoin.getCoin.json.TransactionOutputJson;
@@ -56,6 +59,14 @@ public class Transaction {
         final List<TransactionInputJson> transactionInputJsons = this.inputs.stream().map(TransactionInput::toTransactionInputJson).collect(Collectors.toList());
         final List<TransactionOutputJson> transactionOutputJsons = this.outputs.stream().map(TransactionOutput::toTransactionOutputJson).collect(Collectors.toList());
         return new TransactionJson(this.transactionId, this.signature, senderString, recipientString, this.amount, transactionInputJsons, transactionOutputJsons, sequence);
+    }
+
+    public TransactionDto toTransactionDto() {
+        final String senderString = BlockChainUtils.getStringFromKey(this.sender);
+        final String recipientString = BlockChainUtils.getStringFromKey(this.recipient);
+        final List<TransactionInputDto> transactionInputDtos = this.inputs.stream().map(TransactionInput::toTransactionInputDto).collect(Collectors.toList());
+        final List<TransactionOutputDto> transactionOutputDtos = this.outputs.stream().map(TransactionOutput::toTransactionOutputDto).collect(Collectors.toList());
+        return new TransactionDto(this.transactionId, this.signature, senderString, recipientString, this.amount, transactionInputDtos, transactionOutputDtos, sequence);
     }
 
     public boolean processTransaction() {

@@ -18,6 +18,12 @@ public class Wallet {
 
     private final Map<String, TransactionOutput> UTXOs = new HashMap<>();
 
+    public Wallet(final String publicKey,
+                  final String privateKey) {
+        this.publicKey = BlockChainUtils.decodePublicKey(BlockChainUtils.getKeyBytesFromString(publicKey));
+        this.privateKey = BlockChainUtils.decodePrivateKey(BlockChainUtils.getKeyBytesFromString(privateKey));
+    }
+
     public Wallet(final PublicKey publicKey,
                   final PrivateKey privateKey) {
         this.publicKey = publicKey;

@@ -1,16 +1,16 @@
-package com.getIn.getCoin.getCoin.json;
+package com.getIn.getCoin.dtos;
 
-public class TransactionInputJson {
+public class TransactionInputDto {
 
     private String transactionOutputId;
 
-    private TransactionOutputJson UTXO;
+    private TransactionOutputDto UTXO;
 
-    public TransactionInputJson() {
+    public TransactionInputDto() {
     }
 
-    public TransactionInputJson(final String transactionOutputId,
-                                final TransactionOutputJson UTXO) {
+    public TransactionInputDto(final String transactionOutputId,
+                               final TransactionOutputDto UTXO) {
         this.transactionOutputId = transactionOutputId;
         this.UTXO = UTXO;
     }
@@ -23,11 +23,12 @@ public class TransactionInputJson {
         this.transactionOutputId = transactionOutputId;
     }
 
-    public TransactionOutputJson getUTXO() {
+    public TransactionOutputDto getUTXO() {
         return UTXO;
     }
 
-    public void setUTXO(TransactionOutputJson UTXO) {
+    public void setUTXO(TransactionOutputDto UTXO) {
         this.UTXO = UTXO;
     }
+
 }

@@ -1,5 +1,6 @@
 package com.getIn.getCoin.getCoin;
 
+import com.getIn.getCoin.dtos.TransactionInputDto;
 import com.getIn.getCoin.getCoin.json.TransactionInputJson;
 
 public class TransactionInput {
@@ -19,6 +20,10 @@ public class TransactionInput {
 
     public TransactionInputJson toTransactionInputJson() {
         return new TransactionInputJson(this.transactionOutputId, this.UTXO.toTransactionOutputJson());
+    }
+
+    public TransactionInputDto toTransactionInputDto() {
+        return new TransactionInputDto(this.transactionOutputId, this.UTXO.toTransactionOutputDto());
     }
 
     public String getTransactionOutputId() {
