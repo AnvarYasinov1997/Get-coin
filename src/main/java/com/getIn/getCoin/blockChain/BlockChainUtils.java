@@ -133,7 +133,7 @@ public class BlockChainUtils {
 
     private static String bytesToHex(final byte[] hash) {
         final StringBuilder hexString = new StringBuilder();
-        for (byte hash1 : hash) {
+        for (final byte hash1 : hash) {
             final String hex = Integer.toHexString(0xff & hash1);
             if (hex.length() == 1) hexString.append('0');
             hexString.append(hex);
@@ -162,7 +162,7 @@ public class BlockChainUtils {
 
         List<String> previousTreeLayer = new ArrayList<>();
 
-        for (Transaction transaction : transactions) {
+        for (final Transaction transaction : transactions) {
             previousTreeLayer.add(transaction.getTransactionId());
         }
 

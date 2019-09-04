@@ -55,7 +55,7 @@ public class Wallet {
         final List<TransactionInput> inputs = new ArrayList<>();
 
         Long total = 0L;
-        for (Map.Entry<String, TransactionOutput> item : UTXOs.entrySet()) {
+        for (final Map.Entry<String, TransactionOutput> item : UTXOs.entrySet()) {
             TransactionOutput UTXO = item.getValue();
             total += UTXO.getAmount();
             inputs.add(new TransactionInput(UTXO.getId()));
@@ -65,7 +65,7 @@ public class Wallet {
         final Transaction newTransaction = new Transaction(publicKey, recipient, amount, inputs);
         newTransaction.generateSignature(privateKey);
 
-        for (TransactionInput input : inputs) {
+        for (final TransactionInput input : inputs) {
             UTXOs.remove(input.getTransactionOutputId());
         }
 

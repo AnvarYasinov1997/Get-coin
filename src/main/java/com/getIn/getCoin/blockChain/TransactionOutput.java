@@ -31,6 +31,13 @@ public class TransactionOutput {
         this.recipient = BlockChainUtils.decodePublicKey(BlockChainUtils.getKeyBytesFromString(transactionOutputJson.getRecipient()));
     }
 
+    public TransactionOutput(final TransactionOutputDto transactionOutputDto) {
+        this.id = transactionOutputDto.getId();
+        this.amount = transactionOutputDto.getAmount();
+        this.parentTransactionId = transactionOutputDto.getParentTransactionId();
+        this.recipient = BlockChainUtils.decodePublicKey(BlockChainUtils.getKeyBytesFromString(transactionOutputDto.getRecipient()));
+    }
+
     public TransactionOutputJson toTransactionOutputJson() {
         final String recipientString = BlockChainUtils.getStringFromKey(this.recipient);
         return new TransactionOutputJson(this.id, recipientString, this.parentTransactionId, this.amount);

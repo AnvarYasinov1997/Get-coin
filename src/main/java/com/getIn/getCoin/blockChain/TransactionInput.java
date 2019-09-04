@@ -18,6 +18,11 @@ public class TransactionInput {
         this.UTXO = new TransactionOutput(transactionInputJson.getUTXO());
     }
 
+    public TransactionInput(final TransactionInputDto transactionInputDto) {
+        this.transactionOutputId = transactionInputDto.getTransactionOutputId();
+        this.UTXO = new TransactionOutput(transactionInputDto.getUTXO());
+    }
+
     public TransactionInputJson toTransactionInputJson() {
         return new TransactionInputJson(this.transactionOutputId, this.UTXO.toTransactionOutputJson());
     }

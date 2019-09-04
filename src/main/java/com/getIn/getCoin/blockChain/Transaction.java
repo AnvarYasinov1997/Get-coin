@@ -53,6 +53,17 @@ public class Transaction {
         sequence = transactionJson.getSequence();
     }
 
+    public Transaction(final TransactionDto transactionDto) {
+        this.amount = transactionDto.getAmount();
+        this.signature = transactionDto.getSignature();
+        this.transactionId = transactionDto.getTransactionId();
+        this.sender = BlockChainUtils.decodePublicKey(BlockChainUtils.getKeyBytesFromString(transactionDto.getSender()));
+        this.recipient = BlockChainUtils.decodePublicKey(BlockChainUtils.getKeyBytesFromString(transactionDto.getRecipient()));
+        this.inputs = transactionDto.getInputs().stream().map(TransactionInput::new).collect(Collectors.toList());
+        this.outputs = transactionDto.getOutputs().stream().map(TransactionOutput::new).collect(Collectors.toList());
+        sequence = transactionDto.getSequence();
+    }
+
     public TransactionJson toTransactionJson() {
         final String senderString  = BlockChainUtils.getStringFromKey(this.sender);
         final String recipientString  = BlockChainUtils.getStringFromKey(this.recipient);
@@ -90,11 +101,11 @@ public class Transaction {
         outputs.add(new TransactionOutput(this.recipient, this.transactionId, this.amount));
         outputs.add(new TransactionOutput(this.sender, this.transactionId, leftOver));
 
-        for (TransactionOutput outputs : outputs) {
+        for (final TransactionOutput outputs : outputs) {
             BlockChain.UTXOs.put(outputs.getId(), outputs);
         }
 
-        for (TransactionInput inputs : inputs) {
+        for (final TransactionInput inputs : inputs) {
             if (inputs.getUTXO() == null) continue;
             BlockChain.UTXOs.remove(inputs.getUTXO().getId());
         }

@@ -25,6 +25,18 @@ public class Block {
         calculateHash();
     }
 
+    public Block(final BlockJson blockJson) {
+        this.hash = blockJson.getHash();
+        this.blockHeader = new BlockHeader(blockJson.getBlockHeader());
+        this.transactions = blockJson.getTransactions().stream().map(Transaction::new).collect(Collectors.toList());
+    }
+
+    public Block(final BlockDto blockDto) {
+        this.hash = blockDto.getHash();
+        this.blockHeader = new BlockHeader(blockDto.getBlockHeader());
+        this.transactions = blockDto.getTransactions().stream().map(Transaction::new).collect(Collectors.toList());
+    }
+
     public BlockJson toBlockJson() {
         final List<TransactionJson> transactionJsons = this.transactions.stream().map(Transaction::toTransactionJson).collect(Collectors.toList());
         return new BlockJson(this.hash, this.blockHeader.toBlockHeaderJson(), transactionJsons);
@@ -33,12 +45,6 @@ public class Block {
     public BlockDto toBlockDto() {
         final List<TransactionDto> transactionDtos = this.transactions.stream().map(Transaction::toTransactionDto).collect(Collectors.toList());
         return new BlockDto(this.hash, this.blockHeader.toBlockHeaderDto(), transactionDtos);
-    }
-
-    public Block(final BlockJson blockJson) {
-        this.hash = blockJson.getHash();
-        this.blockHeader = new BlockHeader(blockJson.getBlockHeader());
-        this.transactions = blockJson.getTransactions().stream().map(Transaction::new).collect(Collectors.toList());
     }
 
     public String getHash() {
@@ -94,6 +100,14 @@ public class Block {
             this.merkleRoot = blockHeaderJson.getMerkleRoot();
             this.previousHash = blockHeaderJson.getPreviousHash();
             this.transactionCount = blockHeaderJson.getTransactionCount();
+        }
+
+        public BlockHeader(final BlockDto.BlockHeaderDto blockHeaderDto) {
+            this.nonce = blockHeaderDto.getNonce();
+            this.timestamp = blockHeaderDto.getTimestamp();
+            this.merkleRoot = blockHeaderDto.getMerkleRoot();
+            this.previousHash = blockHeaderDto.getPreviousHash();
+            this.transactionCount = blockHeaderDto.getTransactionCount();
         }
 
         public BlockJson.BlockHeaderJson toBlockHeaderJson() {

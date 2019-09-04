@@ -53,6 +53,10 @@ public class BlockChain {
         } else return new BlockChain(parentFolderDir);
     }
 
+    public void uploadBlockChainFromServerData(final List<Block> blockChain) {
+        this.blockChain.addAll(blockChain);
+    }
+
     public void uploadBlockChain() {
         final List<File> blockFiles = BlockChainUtils.getBlocksFromDir(getPathsByDir(BLOCK_CHAIN_DIR));
         final List<String> blockContents = blockFiles.stream().map(File::getPath).map(BlockChainUtils::getFileContent).collect(Collectors.toList());

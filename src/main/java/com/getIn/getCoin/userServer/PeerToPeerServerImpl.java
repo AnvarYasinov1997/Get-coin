@@ -1,8 +1,13 @@
 package com.getIn.getCoin.userServer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.getIn.getCoin.blockChain.Block;
 import com.getIn.getCoin.blockChain.BlockChain;
-import com.getIn.getCoin.dtos.*;
+import com.getIn.getCoin.blockChain.TransactionOutput;
+import com.getIn.getCoin.dtos.DeletedNodesDto;
+import com.getIn.getCoin.dtos.InitializeDto;
+import com.getIn.getCoin.dtos.NetworkNodesDto;
+import com.getIn.getCoin.dtos.UserDto;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -13,6 +18,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 public class PeerToPeerServerImpl implements PeerToPeerServer {
 
@@ -34,29 +40,28 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
 
     private final Map<String, UserDto> networkNodes = new ConcurrentHashMap<>();
 
-    private ExecutorService executorService;
+    private final ExecutorService executorService;
 
     public PeerToPeerServerImpl(final String userId,
                                 final String port,
                                 final String ipAddress,
                                 final String mainServerPort,
-                                final String mainServerIpAddress,
-                                final BlockChain blockChain) throws Exception {
+                                final String mainServerIpAddress) throws Exception {
         this.userId = userId;
         this.port = port;
         this.ipAddress = ipAddress;
-        this.blockChain = blockChain;
+        this.blockChain = BlockChain.getInstance(DEFAULT_PARENT_FOLDER_DIR);
         this.mainServerSocket = new Socket(mainServerIpAddress, Integer.valueOf(mainServerPort));
         this.serverSocket = new ServerSocket(Integer.valueOf(this.port));
+        this.executorService = Executors.newFixedThreadPool(networkNodes.size());
         this.initServer();
     }
 
     public static void main(String[] args) throws Exception {
         final PeerToPeerServerImpl peerToPeerServer = new PeerToPeerServerImpl(
                 "1", "8081", "localhost",
-                "8080", "localhost",
-                BlockChain.getInstance(DEFAULT_PARENT_FOLDER_DIR)
-        );
+                "8080", "localhost");
+
         new Thread(peerToPeerServer::startServer).start();
         final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
         System.out.println("> Insert data in format: (\"--transfer -amount 100 -to 1)\"" +
@@ -91,9 +96,8 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
                 final NetworkNodesDto networkNodesDto = serializeNetworkNodesDto(clientSocket);
                 switch (RequestType.valueOf(networkNodesDto.getRequestType())) {
                     case VALIDATE_CHECKSUM: {
-                        final CheckSumDto dto = objectMapper.readValue(networkNodesDto.getDto(), CheckSumDto.class);
                         executorService.execute(() -> {
-                            validateCheckSum(clientSocket, dto);
+                            validateCheckSum(clientSocket);
                             System.out.println("> Checksum validated...");
                         });
                     }
@@ -115,7 +119,7 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
         }
     }
 
-    private void validateCheckSum(final Socket clientSocket, final CheckSumDto dto) {
+    private void validateCheckSum(final Socket clientSocket) {
         boolean blockChainStatus = false;
         try {
 //            blockChainStatus = blockChain.compareCheckSum(dto.getCheckSum());
@@ -151,8 +155,9 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
         final NetworkNodesDto networkNodesDto = serializeNetworkNodesDto(mainServerSocket);
         if (RequestType.valueOf(networkNodesDto.getRequestType()) == RequestType.INITIALIZE) {
             final InitializeDto initializeDto = objectMapper.readValue(networkNodesDto.getDto(), InitializeDto.class);
-
-            this.executorService = Executors.newFixedThreadPool(networkNodes.size());
+            initializeDto.getUserDtoList().forEach(it -> networkNodes.put(it.getUserId(), it));
+            initializeDto.getUTXOsDtoList().forEach(it -> BlockChain.UTXOs.put(it.getId(), new TransactionOutput(it)));
+            blockChain.uploadBlockChainFromServerData(initializeDto.getBlockDtoList().stream().map(Block::new).collect(Collectors.toList()));
         } else throw new Exception("> Client has not be initialized");
         System.out.println("> Peer initialized...");
     }
