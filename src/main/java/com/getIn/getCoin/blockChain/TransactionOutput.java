@@ -1,7 +1,7 @@
-package com.getIn.getCoin.getCoin;
+package com.getIn.getCoin.blockChain;
 
+import com.getIn.getCoin.blockChain.json.TransactionOutputJson;
 import com.getIn.getCoin.dtos.TransactionOutputDto;
-import com.getIn.getCoin.getCoin.json.TransactionOutputJson;
 
 import java.security.PublicKey;
 

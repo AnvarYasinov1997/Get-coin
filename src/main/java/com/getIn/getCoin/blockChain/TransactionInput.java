@@ -1,7 +1,7 @@
-package com.getIn.getCoin.getCoin;
+package com.getIn.getCoin.blockChain;
 
+import com.getIn.getCoin.blockChain.json.TransactionInputJson;
 import com.getIn.getCoin.dtos.TransactionInputDto;
-import com.getIn.getCoin.getCoin.json.TransactionInputJson;
 
 public class TransactionInput {
 

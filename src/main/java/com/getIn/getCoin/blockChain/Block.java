@@ -1,9 +1,9 @@
-package com.getIn.getCoin.getCoin;
+package com.getIn.getCoin.blockChain;
 
+import com.getIn.getCoin.blockChain.json.BlockJson;
+import com.getIn.getCoin.blockChain.json.TransactionJson;
 import com.getIn.getCoin.dtos.BlockDto;
 import com.getIn.getCoin.dtos.TransactionDto;
-import com.getIn.getCoin.getCoin.json.BlockJson;
-import com.getIn.getCoin.getCoin.json.TransactionJson;
 
 import java.util.Date;
 import java.util.List;

@@ -1,4 +1,4 @@
-package com.getIn.getCoin.getCoin;
+package com.getIn.getCoin.blockChain;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -1,4 +1,4 @@
-package com.getIn.getCoin.getCoin.json;
+package com.getIn.getCoin.blockChain.json;
 
 public class TransactionOutputJson {
 

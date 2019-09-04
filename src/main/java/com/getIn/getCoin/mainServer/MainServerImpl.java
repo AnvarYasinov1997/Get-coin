@@ -1,13 +1,13 @@
 package com.getIn.getCoin.mainServer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.getIn.getCoin.blockChain.Block;
+import com.getIn.getCoin.blockChain.BlockChain;
+import com.getIn.getCoin.blockChain.TransactionOutput;
 import com.getIn.getCoin.dtos.BlockDto;
 import com.getIn.getCoin.dtos.InitializeDto;
 import com.getIn.getCoin.dtos.TransactionOutputDto;
 import com.getIn.getCoin.dtos.UserDto;
-import com.getIn.getCoin.getCoin.Block;
-import com.getIn.getCoin.getCoin.BlockChain;
-import com.getIn.getCoin.getCoin.TransactionOutput;
 
 import java.io.*;
 import java.net.ServerSocket;
