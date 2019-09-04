@@ -30,7 +30,7 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
 
     private final String ipAddress;
 
-    private final Socket mainServerSocket;
+    private Socket mainServerSocket;
 
     private final ServerSocket serverSocket;
 
@@ -40,7 +40,7 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
 
     private final Map<String, UserDto> networkNodes = new ConcurrentHashMap<>();
 
-    private final ExecutorService executorService;
+    private ExecutorService executorService;
 
     public PeerToPeerServerImpl(final String userId,
                                 final String port,
@@ -51,9 +51,8 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
         this.port = port;
         this.ipAddress = ipAddress;
         this.blockChain = BlockChain.getInstance(DEFAULT_PARENT_FOLDER_DIR);
-        this.mainServerSocket = new Socket(mainServerIpAddress, Integer.valueOf(mainServerPort));
         this.serverSocket = new ServerSocket(Integer.valueOf(this.port));
-        this.executorService = Executors.newFixedThreadPool(networkNodes.size());
+        this.mainServerSocket = new Socket(mainServerIpAddress, Integer.valueOf(mainServerPort));
         this.initServer();
     }
 
@@ -151,13 +150,15 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
                 .ipAddress(ipAddress)
                 .build());
         final PrintWriter printWriter = new PrintWriter(mainServerSocket.getOutputStream(), true);
-        printWriter.println(stringWriter.toString());
+        printWriter.println(stringWriter);
         final NetworkNodesDto networkNodesDto = serializeNetworkNodesDto(mainServerSocket);
         if (RequestType.valueOf(networkNodesDto.getRequestType()) == RequestType.INITIALIZE) {
             final InitializeDto initializeDto = objectMapper.readValue(networkNodesDto.getDto(), InitializeDto.class);
             initializeDto.getUserDtoList().forEach(it -> networkNodes.put(it.getUserId(), it));
             initializeDto.getUTXOsDtoList().forEach(it -> BlockChain.UTXOs.put(it.getId(), new TransactionOutput(it)));
             blockChain.uploadBlockChainFromServerData(initializeDto.getBlockDtoList().stream().map(Block::new).collect(Collectors.toList()));
+            int poolSize = networkNodes.size() < 10 ? 10 : networkNodes.size();
+            this.executorService = Executors.newFixedThreadPool(poolSize);
         } else throw new Exception("> Client has not be initialized");
         System.out.println("> Peer initialized...");
     }

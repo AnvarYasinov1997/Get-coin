@@ -4,10 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.getIn.getCoin.blockChain.Block;
 import com.getIn.getCoin.blockChain.BlockChain;
 import com.getIn.getCoin.blockChain.TransactionOutput;
-import com.getIn.getCoin.dtos.BlockDto;
-import com.getIn.getCoin.dtos.InitializeDto;
-import com.getIn.getCoin.dtos.TransactionOutputDto;
-import com.getIn.getCoin.dtos.UserDto;
+import com.getIn.getCoin.dtos.*;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -87,8 +84,10 @@ class MainServerImpl implements MainServer {
                 final List<BlockDto> blockDtoList = blockChain.selectBlocks().stream().map(Block::toBlockDto).collect(Collectors.toList());
                 final List<TransactionOutputDto> transactionOutputDtoList = blockChain.selectUTXOs().stream().map(TransactionOutput::toTransactionOutputDto).collect(Collectors.toList());
                 final InitializeDto initializeDto = new InitializeDto(userDtoList, blockDtoList, transactionOutputDtoList);
-                objectMapper.writeValue(stringWriter, initializeDto);
-                printWriter.println(stringWriter.toString());
+                final String stringInitializeDto = objectMapper.writeValueAsString(initializeDto);
+                final NetworkNodesDto networkNodesDto = new NetworkNodesDto(stringInitializeDto, "INITIALIZE");
+                objectMapper.writeValue(stringWriter, networkNodesDto);
+                printWriter.println(stringWriter);
                 networkNodes.put(userDto.getUserId(), userDto);
                 System.out.println("> User with id: " + userDto.getUserId() + " initialized...");
             } finally {
