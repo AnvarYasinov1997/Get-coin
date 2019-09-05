@@ -111,18 +111,18 @@ public class BlockChain {
         return newBlock;
     }
 
-    public boolean mineBlock(final Block block) {
+    public Block mineBlock(final Block block) {
         final String target = BlockChainUtils.getDifficultyString(this.difficulty);
         while (!block.getHash().substring(0, this.difficulty).equals(target) && mineMode) {
             block.incrementNonce();
             block.calculateHash();
         }
-        if (!mineMode) {
+        if (mineMode) {
             System.out.println("> Block Mined!!! : " + block.getHash());
-            return true;
+            return block;
         }
         System.out.println("> Mine stopped!!!");
-        return false;
+        return null;
     }
 
     public void enableMineMode() {

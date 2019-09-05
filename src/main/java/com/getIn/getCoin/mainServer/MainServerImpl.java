@@ -39,7 +39,7 @@ class MainServerImpl implements MainServer {
     }
 
     public MainServerImpl(final String serverPort) throws IOException {
-        this.blockChain = BlockChain.getInstance(DEFAULT_PARENT_FOLDER_DIR);
+        this.blockChain = BlockChain.getInstance(DEFAULT_PARENT_FOLDER_DIR, "MEkwEwYHKoZIzj0CAQYIKoZIzj0DAQEDMgAEKaSFwrg4CcRxtC3o4XnD08xLrDs31HGNM25vwETYQbw6F9QjpKuOyFgQYPMFgA1F");
         this.serverSocket = new ServerSocket(Integer.valueOf(serverPort));
         this.executorService = Executors.newFixedThreadPool(usersCount.intValue());
         this.scheduledExecutorService = Executors.newScheduledThreadPool(1);

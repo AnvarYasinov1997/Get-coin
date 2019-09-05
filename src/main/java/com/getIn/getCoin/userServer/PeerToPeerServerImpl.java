@@ -4,10 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.getIn.getCoin.blockChain.Block;
 import com.getIn.getCoin.blockChain.BlockChain;
 import com.getIn.getCoin.blockChain.TransactionOutput;
-import com.getIn.getCoin.dtos.DeletedNodesDto;
-import com.getIn.getCoin.dtos.InitializeDto;
-import com.getIn.getCoin.dtos.NetworkNodesDto;
-import com.getIn.getCoin.dtos.UserDto;
+import com.getIn.getCoin.dtos.*;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -50,7 +47,7 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
         this.userId = userId;
         this.port = port;
         this.ipAddress = ipAddress;
-        this.blockChain = BlockChain.getInstance(DEFAULT_PARENT_FOLDER_DIR, "Public key mock");
+        this.blockChain = BlockChain.getInstance(DEFAULT_PARENT_FOLDER_DIR, "MEkwEwYHKoZIzj0CAQYIKoZIzj0DAQEDMgAE5LAbf0VpQ3Gp6nEqMM/WdgWJvEZgCiarNXZn6b1JG0ih5+d9ksMYb17c+Nb9xmAz");
         this.serverSocket = new ServerSocket(Integer.valueOf(this.port));
         this.mainServerSocket = new Socket(mainServerIpAddress, Integer.valueOf(mainServerPort));
         this.initServer();
@@ -70,10 +67,12 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
             final String command = bufferedReader.readLine();
             final List<String> arguments = Arrays.asList(command.split(" "));
             final String key = arguments.get(0);
-            arguments.remove(0);
             switch (key) {
                 case "--mine": {
                     peerToPeerServer.executeTask(TaskType.MINE);
+                }
+                case "--stopmine": {
+                    peerToPeerServer.executeTask(TaskType.MINE_STOP);
                 }
                 case "--transfer": {
 
@@ -96,8 +95,9 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
                 final NetworkNodesDto networkNodesDto = serializeNetworkNodesDto(clientSocket);
                 switch (RequestType.valueOf(networkNodesDto.getRequestType())) {
                     case VALIDATE_CHECKSUM: {
+                        final BlockDto blockDto = objectMapper.readValue(networkNodesDto.getDto(), BlockDto.class);
                         executorService.execute(() -> {
-                            validateCheckSum(clientSocket);
+                            validateBlock(clientSocket);
                             System.out.println("> Checksum validated...");
                         });
                         break;
@@ -126,8 +126,29 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
             case MINE: {
                 this.executorService.execute(() -> {
                     this.blockChain.enableMineMode();
-                    this.blockChain.mineBlock(this.blockChain.generateBlock());
+                    final Block block = this.blockChain.mineBlock(this.blockChain.generateBlock());
+                    this.networkNodes.forEach((key, value) -> {
+                        this.executorService.execute(() -> {
+                            try {
+                                final Socket socket = new Socket(value.getIpAddress(), Integer.valueOf(value.getPort()));
+                                final StringWriter stringWriter = new StringWriter();
+                                final PrintWriter printWriter = new PrintWriter(socket.getOutputStream(), true);
+                                final BlockDto blockDto = block.toBlockDto();
+                                final String blockDtoString = objectMapper.writeValueAsString(blockDto);
+                                final NetworkNodesDto networkNodesDto = new NetworkNodesDto(RequestType.CONFIRM_BLOCK.name(), blockDtoString);
+                                final String networkNodesDtoString = objectMapper.writeValueAsString(networkNodesDto);
+                                objectMapper.writeValue(stringWriter, networkNodesDtoString);
+                                printWriter.println(stringWriter);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        });
+                    });
                 });
+                break;
+            }
+            case MINE_STOP: {
+                this.blockChain.disableMineMode();
                 break;
             }
             default:
@@ -135,10 +156,11 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
         }
     }
 
-    private void validateCheckSum(final Socket clientSocket) {
-        boolean blockChainStatus = false;
+    private void validateBlock(final Socket clientSocket) {
+        boolean blockChainStatus = true;
         try {
-//            blockChainStatus = blockChain.compareCheckSum(dto.getCheckSum());
+            // validate bloks
+            System.out.println("Validate block");
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -152,7 +174,7 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
                 System.out.println("CheckSum validated");
             } finally {
                 if (bufferedWriter != null) bufferedWriter.close();
-
+                if (clientSocket != null) clientSocket.close();
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -187,7 +209,7 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
     }
 
     private enum RequestType {
-        INITIALIZE, VALIDATE_CHECKSUM, UPDATE_NETWORK_NODES
+        INITIALIZE, VALIDATE_CHECKSUM, UPDATE_NETWORK_NODES, CONFIRM_BLOCK
     }
 
     private enum BlockChainStatus {
@@ -195,7 +217,7 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
     }
 
     public enum TaskType {
-        MINE
+        MINE, MINE_STOP
     }
 
 }
