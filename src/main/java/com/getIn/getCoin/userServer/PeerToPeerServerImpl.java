@@ -50,7 +50,7 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
         this.userId = userId;
         this.port = port;
         this.ipAddress = ipAddress;
-        this.blockChain = BlockChain.getInstance(DEFAULT_PARENT_FOLDER_DIR);
+        this.blockChain = BlockChain.getInstance(DEFAULT_PARENT_FOLDER_DIR, "Public key mock");
         this.serverSocket = new ServerSocket(Integer.valueOf(this.port));
         this.mainServerSocket = new Socket(mainServerIpAddress, Integer.valueOf(mainServerPort));
         this.initServer();
@@ -73,6 +73,7 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
             arguments.remove(0);
             switch (key) {
                 case "--mine": {
+                    peerToPeerServer.executeTask(TaskType.MINE);
                 }
                 case "--transfer": {
 
@@ -99,6 +100,7 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
                             validateCheckSum(clientSocket);
                             System.out.println("> Checksum validated...");
                         });
+                        break;
                     }
                     case UPDATE_NETWORK_NODES: {
                         final DeletedNodesDto dto = objectMapper.readValue(networkNodesDto.getDto(), DeletedNodesDto.class);
@@ -106,6 +108,7 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
                             dto.getDeletedUserIds().forEach(networkNodes::remove);
                             System.out.println("> Network nodes updated...");
                         });
+                        break;
                     }
                     default: {
                         System.out.println("> Server already initialized...");
@@ -115,6 +118,20 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    public void executeTask(final TaskType taskType) {
+        switch (taskType) {
+            case MINE: {
+                this.executorService.execute(() -> {
+                    this.blockChain.enableMineMode();
+                    this.blockChain.mineBlock(this.blockChain.generateBlock());
+                });
+                break;
+            }
+            default:
+                System.out.println("Mock");
         }
     }
 
@@ -175,6 +192,10 @@ public class PeerToPeerServerImpl implements PeerToPeerServer {
 
     private enum BlockChainStatus {
         READABLE, CORRUPTED
+    }
+
+    public enum TaskType {
+        MINE
     }
 
 }

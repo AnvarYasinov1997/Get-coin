@@ -90,14 +90,14 @@ public class Transaction {
             inputs.setUTXO(BlockChain.UTXOs.get(inputs.getTransactionOutputId()));
         }
 
-        if (getInputsAmount() < BlockChain.minimumTransactionAmount) {
+        if (this.getInputsAmount() < BlockChain.minimumTransactionAmount) {
             System.out.println("Transaction Inputs too small: " + getInputsAmount());
             System.out.println("Please enter the amount greater than " + BlockChain.minimumTransactionAmount);
             return false;
         }
 
-        final Long leftOver = getInputsAmount() - amount;
-        this.transactionId = calculateHash();
+        final Long leftOver = this.getInputsAmount() - amount;
+        this.transactionId = this.calculateHash();
         outputs.add(new TransactionOutput(this.recipient, this.transactionId, this.amount));
         outputs.add(new TransactionOutput(this.sender, this.transactionId, leftOver));
 

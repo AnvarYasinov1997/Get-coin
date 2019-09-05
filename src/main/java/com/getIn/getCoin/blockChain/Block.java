@@ -5,6 +5,8 @@ import com.getIn.getCoin.blockChain.json.TransactionJson;
 import com.getIn.getCoin.dtos.BlockDto;
 import com.getIn.getCoin.dtos.TransactionDto;
 
+import java.security.PublicKey;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -18,8 +20,13 @@ public class Block {
     private final BlockHeader blockHeader;
 
     public Block(final String previousHash,
+                 final PublicKey winnerPublicKey,
+                 final Long winnerTransferAmount,
                  final List<Transaction> transactions) {
-        this.transactions = this.addTransaction(transactions);
+        this.transactions = new ArrayList<>();
+        final Transaction zeroTransaction = new Transaction(null, winnerPublicKey, winnerTransferAmount, null);
+        this.transactions.add(zeroTransaction);
+        this.transactions.addAll(this.addTransaction(transactions));
         final String merkleRoot = BlockChainUtils.getMerkleRoot(this.transactions);
         this.blockHeader = new BlockHeader(previousHash, merkleRoot, Long.valueOf(this.transactions.size()));
         calculateHash();

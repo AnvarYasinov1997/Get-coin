@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-
 public class BlockChain {
 
     private static BlockChain blockChainInstance = null;
@@ -29,9 +28,13 @@ public class BlockChain {
 
     public static final Map<String, TransactionOutput> UTXOs = new HashMap<>();
 
+    private Long winnerTransferAmount = 50L;
+
     public static Long minimumTransactionAmount = 1L;
 
     private Integer difficulty = 6;
+
+    private final PublicKey userPublicKey;
 
     private final String parentFolderDir;
 
@@ -39,18 +42,19 @@ public class BlockChain {
 
     private final List<Transaction> waitTransactions;
 
-    private final boolean mineActive = false;
+    private boolean mineMode = false;
 
-    private BlockChain(final String parentFolderDir) {
+    private BlockChain(final String parentFolderDir, final String userPublicKey) {
+        this.userPublicKey = BlockChainUtils.decodePublicKey(BlockChainUtils.getKeyBytesFromString(userPublicKey));
         this.parentFolderDir = parentFolderDir;
         this.blockChain = new ArrayList<>();
         this.waitTransactions = new ArrayList<>();
     }
 
-    public static BlockChain getInstance(final String parentFolderDir) {
+    public static BlockChain getInstance(final String parentFolderDir, final String userPublicKey) {
         if (blockChainInstance != null) {
             return blockChainInstance;
-        } else return new BlockChain(parentFolderDir);
+        } else return new BlockChain(parentFolderDir, userPublicKey);
     }
 
     public void uploadBlockChainFromServerData(final List<Block> blockChain) {
@@ -64,7 +68,8 @@ public class BlockChain {
         final List<Block> blocks = jsonBlocks.stream().map(Block::new).collect(Collectors.toList());
         final File UTXOsFile = new File(getPathsByDir(UTXOS_JSON));
         final String UTXOsContent = BlockChainUtils.getFileContent(UTXOsFile.getPath());
-        final Map<String, TransactionOutputJson> UTXOsJson = BlockChainUtils.serializeStringToHashMap(UTXOsContent, new TypeReference<HashMap<String, TransactionOutputJson>>() {});
+        final Map<String, TransactionOutputJson> UTXOsJson = BlockChainUtils.serializeStringToHashMap(UTXOsContent, new TypeReference<HashMap<String, TransactionOutputJson>>() {
+        });
         this.blockChain.addAll(blocks);
         for (Map.Entry<String, TransactionOutputJson> it : UTXOsJson.entrySet()) {
             UTXOs.put(it.getKey(), new TransactionOutput(it.getValue()));
@@ -98,18 +103,34 @@ public class BlockChain {
         return new Wallet(publicKey, privateKey);
     }
 
+    public Block generateBlock() {
+        final Block previousBlock = this.blockChain.get(this.blockChain.size() - 1);
+        final List<Transaction> transactions = new ArrayList<>(this.waitTransactions);
+        final Block newBlock = new Block(previousBlock.getHash(), this.userPublicKey, this.winnerTransferAmount, transactions);
+        this.waitTransactions.clear();
+        return newBlock;
+    }
+
     public boolean mineBlock(final Block block) {
         final String target = BlockChainUtils.getDifficultyString(this.difficulty);
-        while (!block.getHash().substring(0, this.difficulty).equals(target) && mineActive) {
+        while (!block.getHash().substring(0, this.difficulty).equals(target) && mineMode) {
             block.incrementNonce();
             block.calculateHash();
         }
-        if (!mineActive) {
+        if (!mineMode) {
             System.out.println("> Block Mined!!! : " + block.getHash());
             return true;
         }
         System.out.println("> Mine stopped!!!");
         return false;
+    }
+
+    public void enableMineMode() {
+        this.mineMode = true;
+    }
+
+    public void disableMineMode() {
+        this.mineMode = false;
     }
 
     private String getPathsByDir(final String dir) {

@@ -36,7 +36,6 @@ class MainServerImpl implements MainServer {
     public static void main(String[] args) throws IOException {
         final MainServer mainServer = new MainServerImpl("8080");
         mainServer.startServer();
-
     }
 
     public MainServerImpl(final String serverPort) throws IOException {
