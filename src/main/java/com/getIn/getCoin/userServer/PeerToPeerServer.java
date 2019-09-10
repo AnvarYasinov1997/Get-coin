@@ -42,8 +42,6 @@ public class PeerToPeerServer {
 
     private ExecutorService executorService;
 
-    private boolean severStarted = true;
-
     public PeerToPeerServer(final String userId,
                             final String port,
                             final String ipAddress,
@@ -62,63 +60,59 @@ public class PeerToPeerServer {
         final PeerToPeerServer peerToPeerServer = new PeerToPeerServer(
                 "1", "8081", "localhost",
                 "8080", "localhost");
-        peerToPeerServer.process();
         peerToPeerServer.startServer();
+        peerToPeerServer.clientProcess();
     }
 
     public void startServer() {
         System.out.println("> Start server...");
-        try {
-            while (severStarted) {
-                final Socket clientSocket = serverSocket.accept();
-                final NetworkNodesDto networkNodesDto = serializeNetworkNodesDto(clientSocket);
-                switch (RequestType.valueOf(networkNodesDto.getRequestType())) {
-                    case ADD_BLOCK: {
-                        final BlockDto blockDto = objectMapper.readValue(networkNodesDto.getDto(), BlockDto.class);
-                        validateBlock(clientSocket, new Block(blockDto));
-                        System.out.println("> Checksum validated...");
-                        break;
-                    }
-                    case UPDATE_NETWORK_NODES: {
-                        final DeletedNodesDto dto = objectMapper.readValue(networkNodesDto.getDto(), DeletedNodesDto.class);
-                        dto.getDeletedUserIds().forEach(networkNodes::remove);
-                        System.out.println("> Network nodes updated...");
-                        break;
-                    }
-                    default:
-                        System.out.println("> Server already initialized...");
-                }
-            }
-            System.out.println("> Server stopped");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        Observable.generate(() -> this.serverSocket, this::serverBiConsumerAccept, ServerSocket::close)
+                .subscribeOn(Schedulers.io())
+                .observeOn(Schedulers.computation())
+                .map(this::serializeNetworkNodesDto)
+                .subscribe(this::handleServerRequests, Throwable::printStackTrace);
     }
 
-    public void process() {
+    public void clientProcess() {
         System.out.println("> Insert data in format: (\"--transfer -amount 100 -to 1)\"" +
                 " where sum is amount is amount of coins for payment and to is user public key...");
-        final Observable<String> observable =
-                Observable.generate(this::getTerminalReader, this::biConsumerAccept, BufferedReader::close)
-                        .observeOn(Schedulers.io())
-                        .subscribeOn(Schedulers.computation());
-        observable.subscribe(new DisposableObserver<String>() {
-            @Override
-            public void onNext(String s) {
-                final List<String> arguments = Arrays.asList(s.split(" "));
-                PeerToPeerServer.this.handleCommandLineArguments(arguments, this);
-            }
+        Observable.generate(this::getTerminalReader, this::clientBiConsumerAccept, BufferedReader::close)
+                .subscribeOn(Schedulers.computation())
+                .subscribe(new DisposableObserver<String>() {
+                    @Override
+                    public void onNext(String s) {
+                        final List<String> arguments = Arrays.asList(s.split(" "));
+                        PeerToPeerServer.this.handleCommandLineArguments(arguments, this);
+                    }
 
-            @Override
-            public void onError(Throwable e) {
-                e.printStackTrace();
-            }
+                    @Override
+                    public void onError(Throwable e) {
+                        e.printStackTrace();
+                    }
 
-            @Override
-            public void onComplete() {
-                System.out.println("Complete");
+                    @Override
+                    public void onComplete() {
+                        System.out.println("Complete");
+                    }
+                });
+    }
+
+    private void handleServerRequests(final NetworkNodesDto networkNodesDto) throws IOException {
+        switch (RequestType.valueOf(networkNodesDto.getRequestType())) {
+            case ADD_BLOCK: {
+                final BlockDto blockDto = objectMapper.readValue(networkNodesDto.getDto(), BlockDto.class);
+                blockChain.validateBlock(new Block(blockDto));
+                break;
             }
-        });
+            case UPDATE_NETWORK_NODES: {
+                final DeletedNodesDto dto = objectMapper.readValue(networkNodesDto.getDto(), DeletedNodesDto.class);
+                dto.getDeletedUserIds().forEach(networkNodes::remove);
+                System.out.println("> Network nodes updated...");
+                break;
+            }
+            default:
+                System.out.println("> Server already initialized...");
+        }
     }
 
     private void handleCommandLineArguments(final List<String> arguments, final Disposable observer) {
@@ -136,6 +130,7 @@ public class PeerToPeerServer {
                             final String publicKey = arguments.get(2);
                             final String privateKey = arguments.get(3);
                             blockChain.generateWallet(publicKey, privateKey);
+                            System.out.println("Wallet created");
                         } else System.out.println("> Invalid command");
                     } else if (arguments.size() == 2) {
                         final String command = arguments.get(1);
@@ -143,6 +138,7 @@ public class PeerToPeerServer {
                             blockChain.removeWallet();
                         }
                     } else System.out.println("> Invalid arguments");
+                    break;
                 }
                 case "--mine": {
                     if (arguments.size() == 2) {
@@ -175,7 +171,6 @@ public class PeerToPeerServer {
                     break;
                 }
                 case "--exit": {
-                    this.severStarted = false;
                     observer.dispose();
                     break;
                 }
@@ -183,21 +178,6 @@ public class PeerToPeerServer {
                     System.out.println("> Key is not found");
             }
         } else System.out.println("> Command line is empty");
-    }
-
-    private BufferedReader getTerminalReader() {
-        return new BufferedReader(new InputStreamReader(System.in));
-    }
-
-    private void biConsumerAccept(final BufferedReader bufferedReader, final Emitter<String> emitter) {
-        try {
-            final String command = bufferedReader.readLine();
-            if (command != null) emitter.onNext(command);
-            else emitter.onComplete();
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new RuntimeException();
-        }
     }
 
     private void sendBlockToPeers(final Block block) {
@@ -218,23 +198,6 @@ public class PeerToPeerServer {
                 }
             });
         });
-    }
-
-    private void validateBlock(final Socket clientSocket, final Block block) {
-        boolean blockChainStatus = blockChain.validateBlock(block);
-        System.out.println("Validate block");
-        final BlockChainStatus status = blockChainStatus ? BlockChainStatus.READABLE : BlockChainStatus.CORRUPTED;
-        try {
-            try (final BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()))) {
-                bufferedWriter.write(status.toString() + "\n");
-                bufferedWriter.flush();
-                System.out.println("Block added");
-            } finally {
-                if (clientSocket != null) clientSocket.close();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     private void initServer() throws Exception {
@@ -262,6 +225,47 @@ public class PeerToPeerServer {
         final BufferedReader requestReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         final String message = requestReader.readLine();
         return objectMapper.readValue(message, NetworkNodesDto.class);
+    }
+
+    private BufferedReader getTerminalReader() {
+        return new BufferedReader(new InputStreamReader(System.in));
+    }
+
+    private void clientBiConsumerAccept(final BufferedReader bufferedReader, final Emitter<String> emitter) {
+        try {
+            final String command = bufferedReader.readLine();
+            if (command != null) emitter.onNext(command);
+            else emitter.onComplete();
+        } catch (IOException e) {
+            e.printStackTrace();
+            emitter.onComplete();
+            throw new RuntimeException();
+        }
+    }
+
+    private void serverBiConsumerAccept(final ServerSocket serverSocket, final Emitter<Socket> emitter) {
+        try {
+            emitter.onNext(serverSocket.accept());
+        } catch (IOException e) {
+            e.printStackTrace();
+            emitter.onComplete();
+            throw new RuntimeException();
+        }
+    }
+
+    private void returnBlockValidatedResult(final Socket clientSocket, final boolean blockChainStatus) {
+        try {
+            try (final BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()))) {
+                final BlockChainStatus status = blockChainStatus ? BlockChainStatus.READABLE : BlockChainStatus.CORRUPTED;
+                bufferedWriter.write(status.toString() + "\n");
+                bufferedWriter.flush();
+                System.out.println("Block added");
+            } finally {
+                if (clientSocket != null) clientSocket.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private enum RequestType {
