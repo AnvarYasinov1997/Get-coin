@@ -50,7 +50,10 @@ public class PeerToPeerServer {
         this.userId = userId;
         this.port = port;
         this.ipAddress = ipAddress;
-        this.blockChain = BlockChain.getInstance(DEFAULT_PARENT_FOLDER_DIR, "MEkwEwYHKoZIzj0CAQYIKoZIzj0DAQEDMgAE5LAbf0VpQ3Gp6nEqMM/WdgWJvEZgCiarNXZn6b1JG0ih5+d9ksMYb17c+Nb9xmAz");
+        this.blockChain = BlockChain.getInstance(
+                DEFAULT_PARENT_FOLDER_DIR,
+                5L,
+                "MEkwEwYHKoZIzj0CAQYIKoZIzj0DAQEDMgAE5LAbf0VpQ3Gp6nEqMM/WdgWJvEZgCiarNXZn6b1JG0ih5+d9ksMYb17c+Nb9xmAz");
         this.serverSocket = new ServerSocket(Integer.valueOf(this.port));
         this.mainServerSocket = new Socket(mainServerIpAddress, Integer.valueOf(mainServerPort));
         this.initServer();
@@ -82,7 +85,11 @@ public class PeerToPeerServer {
                     @Override
                     public void onNext(String s) {
                         final List<String> arguments = Arrays.asList(s.split(" "));
-                        PeerToPeerServer.this.handleCommandLineArguments(arguments, this);
+                        try {
+                            PeerToPeerServer.this.handleCommandLineArguments(arguments, this);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
                     }
 
                     @Override
@@ -97,25 +104,7 @@ public class PeerToPeerServer {
                 });
     }
 
-    private void handleServerRequests(final NetworkNodesDto networkNodesDto) throws IOException {
-        switch (RequestType.valueOf(networkNodesDto.getRequestType())) {
-            case ADD_BLOCK: {
-                final BlockDto blockDto = objectMapper.readValue(networkNodesDto.getDto(), BlockDto.class);
-                blockChain.validateBlock(new Block(blockDto));
-                break;
-            }
-            case UPDATE_NETWORK_NODES: {
-                final DeletedNodesDto dto = objectMapper.readValue(networkNodesDto.getDto(), DeletedNodesDto.class);
-                dto.getDeletedUserIds().forEach(networkNodes::remove);
-                System.out.println("> Network nodes updated...");
-                break;
-            }
-            default:
-                System.out.println("> Server already initialized...");
-        }
-    }
-
-    private void handleCommandLineArguments(final List<String> arguments, final Disposable observer) {
+    private void handleCommandLineArguments(final List<String> arguments, final Disposable observer) throws Exception {
         if (!arguments.isEmpty()) {
             final String key = arguments.get(0);
             switch (key) {
@@ -178,6 +167,39 @@ public class PeerToPeerServer {
                     System.out.println("> Key is not found");
             }
         } else System.out.println("> Command line is empty");
+    }
+
+    private void handleServerRequests(final NetworkNodesDto networkNodesDto) throws Exception {
+        switch (RequestType.valueOf(networkNodesDto.getRequestType())) {
+            case CONFIRM_BLOCK: {
+                final BlockDto blockDto = objectMapper.readValue(networkNodesDto.getDto(), BlockDto.class);
+                blockChain.validateBlock(new Block(blockDto));
+                break;
+            }
+            case UPDATE_NETWORK_NODES: {
+                final DeletedNodesDto dto = objectMapper.readValue(networkNodesDto.getDto(), DeletedNodesDto.class);
+                dto.getDeletedUserIds().forEach(networkNodes::remove);
+                System.out.println("> Network nodes updated...");
+                break;
+            }
+            case CHECK_TRANSACTION_COMISSION: {
+                final TransactionCommissionRequestDto dto = objectMapper.readValue(networkNodesDto.getDto(), TransactionCommissionRequestDto.class);
+                final boolean approved = blockChain.checkMinerCommissionAmount(dto.getCommissionAmount());
+                final TransactionCommissionResponseDto response = new TransactionCommissionResponseDto(approved);
+                final String responseString = objectMapper.writeValueAsString(response);
+                this.returnResponse(new Socket("localhost", 8080), responseString);
+                break;
+            }
+            case ADD_TRANSACTION: {
+                final TransactionDto dto = objectMapper.readValue(networkNodesDto.getDto(), TransactionDto.class);
+                final Transaction transaction = new Transaction(dto);
+                final boolean approved = blockChain.checkMinerCommissionOutputTransaction(transaction);
+                if (approved) blockChain.addTransaction(transaction);
+                break;
+            }
+            default:
+                System.out.println("> Server already initialized...");
+        }
     }
 
     private void sendBlockToPeers(final Block block) {
@@ -253,13 +275,12 @@ public class PeerToPeerServer {
         }
     }
 
-    private void returnBlockValidatedResult(final Socket clientSocket, final boolean blockChainStatus) {
+    private void returnResponse(final Socket clientSocket, final String data) {
         try {
             try (final BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()))) {
-                final BlockChainStatus status = blockChainStatus ? BlockChainStatus.READABLE : BlockChainStatus.CORRUPTED;
-                bufferedWriter.write(status.toString() + "\n");
+                bufferedWriter.write(data + "\n");
                 bufferedWriter.flush();
-                System.out.println("Block added");
+                System.out.println("Response returned");
             } finally {
                 if (clientSocket != null) clientSocket.close();
             }
@@ -269,11 +290,7 @@ public class PeerToPeerServer {
     }
 
     private enum RequestType {
-        INITIALIZE, ADD_BLOCK, UPDATE_NETWORK_NODES, CONFIRM_BLOCK
-    }
-
-    private enum BlockChainStatus {
-        READABLE, CORRUPTED
+        INITIALIZE, CONFIRM_BLOCK, UPDATE_NETWORK_NODES, CHECK_TRANSACTION_COMISSION, ADD_TRANSACTION
     }
 
 }

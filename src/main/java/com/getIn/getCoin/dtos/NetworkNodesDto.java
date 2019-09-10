@@ -1,6 +1,7 @@
 package com.getIn.getCoin.dtos;
 
 public class NetworkNodesDto {
+
     private String requestType;
 
     private String dto;

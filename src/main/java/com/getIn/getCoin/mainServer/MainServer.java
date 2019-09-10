@@ -39,7 +39,7 @@ class MainServer {
     }
 
     public MainServer(final String serverPort) throws IOException {
-        this.blockChain = BlockChain.getInstance(DEFAULT_PARENT_FOLDER_DIR, "MEkwEwYHKoZIzj0CAQYIKoZIzj0DAQEDMgAEKaSFwrg4CcRxtC3o4XnD08xLrDs31HGNM25vwETYQbw6F9QjpKuOyFgQYPMFgA1F");
+        this.blockChain = BlockChain.getInstance(DEFAULT_PARENT_FOLDER_DIR, 5L, "MEkwEwYHKoZIzj0CAQYIKoZIzj0DAQEDMgAEKaSFwrg4CcRxtC3o4XnD08xLrDs31HGNM25vwETYQbw6F9QjpKuOyFgQYPMFgA1F");
         this.serverSocket = new ServerSocket(Integer.valueOf(serverPort));
         this.executorService = Executors.newFixedThreadPool(usersCount.intValue());
         this.scheduledExecutorService = Executors.newScheduledThreadPool(1);
@@ -108,7 +108,7 @@ class MainServer {
                 deleteNodes.add(it);
             }
         }
-        System.out.println("> Users with ids -> " + deleteNodes.toString() + "\n" +"  is not active...");
+        System.out.println("> Users with ids -> " + deleteNodes.toString() + "\n" + "  is not active...");
         deleteNodes.forEach(networkNodes::remove);
     }
 

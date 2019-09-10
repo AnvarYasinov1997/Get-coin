@@ -10,10 +10,9 @@ import java.io.File;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Security;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.SynchronousQueue;
 import java.util.stream.Collectors;
 
 public class BlockChain {
@@ -28,8 +27,6 @@ public class BlockChain {
 
     public static final Map<String, TransactionOutput> UTXOs = new HashMap<>();
 
-    private Long winnerTransferAmount = 50L;
-
     public static Long minimumTransactionAmount = 1L;
 
     private Integer difficulty = 6;
@@ -42,25 +39,32 @@ public class BlockChain {
 
     private final List<Block> blockChain;
 
-    private final List<Transaction> waitTransactions;
+    private Long minimalCommissionAmount;
+
+    private final SynchronizedArrayQueue<Transaction> waitTransactionsQueue;
 
     private boolean mineMode = false;
 
-    private BlockChain(final String parentFolderDir, final String userPublicKey) {
+    private List<Transaction> cacheTransactions;
+
+    public BlockingQueue<Boolean> updateMiningSynchronousQueue = new SynchronousQueue<>();
+
+    private BlockChain(final String parentFolderDir, final String userPublicKey, final Long minimalCommissionAmount) {
         this.userPublicKey = BlockChainUtils.decodePublicKey(BlockChainUtils.getKeyBytesFromString(userPublicKey));
         this.parentFolderDir = parentFolderDir;
         this.blockChain = new ArrayList<>();
-        this.waitTransactions = new ArrayList<>();
+        this.waitTransactionsQueue = new CustomSynchronizedArrayQueue<>();
+        this.minimalCommissionAmount = minimalCommissionAmount;
     }
 
     static {
         Security.addProvider(new BouncyCastleProvider());
     }
 
-    public static BlockChain getInstance(final String parentFolderDir, final String userPublicKey) {
+    public static BlockChain getInstance(final String parentFolderDir, final Long minerCommissionAmount, final String userPublicKey) {
         if (blockChainInstance != null) {
             return blockChainInstance;
-        } else return new BlockChain(parentFolderDir, userPublicKey);
+        } else return new BlockChain(parentFolderDir, userPublicKey, minerCommissionAmount);
     }
 
     public void uploadBlockChainFromServerData(final List<Block> blockChain) {
@@ -119,22 +123,37 @@ public class BlockChain {
         return this.userWallet;
     }
 
+    public boolean checkMinerCommissionAmount(final Long requestCommissionAmount) {
+        return this.minimalCommissionAmount < requestCommissionAmount;
+    }
+
+    public boolean checkMinerCommissionOutputTransaction(final Transaction transaction) {
+        for (TransactionOutput output : transaction.getOutputs()) {
+            if (output.getRecipient().equals(this.userPublicKey)) return true;
+        }
+        return false;
+    }
+
+    public void addTransaction(final Transaction transaction) {
+        this.waitTransactionsQueue.add(transaction);
+    }
+
     public Block generateBlock() {
         final Block previousBlock = this.blockChain.get(this.blockChain.size() - 1);
-        final List<Transaction> transactions = new ArrayList<>(this.waitTransactions);
-        final Block newBlock = new Block(previousBlock.getHash(), this.userPublicKey, this.winnerTransferAmount, transactions);
-        this.waitTransactions.clear();
-        return newBlock;
+        this.cacheTransactions = this.waitTransactionsQueue.takeAllAndClear();
+        final List<Transaction> transactions = this.waitTransactionsQueue.takeAllAndClear();
+        Long winnerTransferAmount = 50L;
+        return new Block(previousBlock.getHash(), this.userPublicKey, winnerTransferAmount, transactions);
     }
 
     public Transaction createTransaction(final String recipientPublicKeyString, final Long amount) {
         final PublicKey recipientPublicKey = BlockChainUtils.decodePublicKey(BlockChainUtils.getKeyBytesFromString(recipientPublicKeyString));
         final Transaction transaction = this.userWallet.generateTransaction(recipientPublicKey, amount);
-        if (mineMode) waitTransactions.add(transaction);
+        if (mineMode) waitTransactionsQueue.add(transaction);
         return transaction;
     }
 
-    public Block mineBlock(final Block block) {
+    public Block mineBlock(final Block block) throws Exception {
         final String target = BlockChainUtils.getDifficultyString(this.difficulty);
         while (!block.getHash().substring(0, this.difficulty).equals(target) && this.mineMode) {
             block.incrementNonce();
@@ -145,6 +164,9 @@ public class BlockChain {
             return block;
         }
         System.out.println("> Mine stopped!!!");
+        this.waitTransactionsQueue.addAll(new ArrayList<>(this.cacheTransactions));
+        this.cacheTransactions.clear();
+        this.updateMiningSynchronousQueue.put(true);
         return null;
     }
 
@@ -160,11 +182,16 @@ public class BlockChain {
         return this.parentFolderDir + dir;
     }
 
-    public synchronized boolean validateBlock(final Block block) {
+    public synchronized void validateBlock(final Block block) throws Exception {
         this.blockChain.add(block);
-        if (isChainValid()) return true;
-        else this.blockChain.remove(this.blockChain.size() - 1);
-        return false;
+        if (isChainValid()) {
+            if (mineMode) {
+                this.disableMineMode();
+                this.updateMiningSynchronousQueue.take();
+                this.enableMineMode();
+                this.mineBlock(this.generateBlock());
+            }
+        } else this.blockChain.remove(this.blockChain.size() - 1);
     }
 
     private boolean isChainValid() {
@@ -243,6 +270,42 @@ public class BlockChain {
         }
         System.out.println("Blockchain is valid");
         return true;
+    }
+
+    private interface SynchronizedArrayQueue<T> {
+        T get(int index);
+
+        boolean add(T t);
+
+        boolean addAll(Collection<? extends T> c);
+
+        List<T> takeAllAndClear();
+    }
+
+    private static class CustomSynchronizedArrayQueue<T> extends ArrayList<T> implements SynchronizedArrayQueue<T> {
+
+        @Override
+        public synchronized T get(final int index) {
+            return super.get(index);
+        }
+
+        @Override
+        public synchronized boolean add(final T t) {
+            return super.add(t);
+        }
+
+        @Override
+        public synchronized boolean addAll(final Collection<? extends T> c) {
+            return super.addAll(c);
+        }
+
+        @Override
+        public synchronized List<T> takeAllAndClear() {
+            final List<T> list = new ArrayList<>(this);
+            super.clear();
+            return list;
+        }
+
     }
 
 //    public static void main(String[] args) {
