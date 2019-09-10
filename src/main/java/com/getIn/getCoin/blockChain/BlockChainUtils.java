@@ -64,6 +64,16 @@ public class BlockChainUtils {
         }
     }
 
+    private static String bytesToHex(final byte[] hash) {
+        final StringBuilder hexString = new StringBuilder();
+        for (final byte it : hash) {
+            final String hex = Integer.toHexString(0xff & it);
+            if (hex.length() == 1) hexString.append('0');
+            hexString.append(hex);
+        }
+        return hexString.toString();
+    }
+
     public static KeyPair getKeyPairGenerator() {
         try {
             final KeyPairGenerator keyGen = KeyPairGenerator.getInstance("ECDSA", "BC");
@@ -129,16 +139,6 @@ public class BlockChainUtils {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private static String bytesToHex(final byte[] hash) {
-        final StringBuilder hexString = new StringBuilder();
-        for (final byte hash1 : hash) {
-            final String hex = Integer.toHexString(0xff & hash1);
-            if (hex.length() == 1) hexString.append('0');
-            hexString.append(hex);
-        }
-        return hexString.toString();
     }
 
     public static String getFileContent(final String fileName) {

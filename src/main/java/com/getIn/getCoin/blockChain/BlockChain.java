@@ -34,6 +34,8 @@ public class BlockChain {
 
     private Integer difficulty = 6;
 
+    private Wallet userWallet;
+
     private final PublicKey userPublicKey;
 
     private final String parentFolderDir;
@@ -49,6 +51,10 @@ public class BlockChain {
         this.parentFolderDir = parentFolderDir;
         this.blockChain = new ArrayList<>();
         this.waitTransactions = new ArrayList<>();
+    }
+
+    static {
+        Security.addProvider(new BouncyCastleProvider());
     }
 
     public static BlockChain getInstance(final String parentFolderDir, final String userPublicKey) {
@@ -76,15 +82,25 @@ public class BlockChain {
         }
     }
 
-    static {
-        Security.addProvider(new BouncyCastleProvider());
+    public void generateNewWallet() {
+        if (this.userWallet == null) {
+            final Pair<PublicKey, PrivateKey> keys = Wallet.createNewWallet();
+            System.out.println("> Public key: " + BlockChainUtils.getStringFromKey(keys.getKey()));
+            System.out.println("> Private key: " + BlockChainUtils.getStringFromKey(keys.getValue()));
+            this.userWallet = new Wallet(keys.getKey(), keys.getValue());
+        }
     }
 
-    public Wallet generateNewWallet() {
-        final Pair<PublicKey, PrivateKey> keys = Wallet.createNewWallet();
-        System.out.println("> Public key: " + BlockChainUtils.getStringFromKey(keys.getKey()));
-        System.out.println("> Private key: " + BlockChainUtils.getStringFromKey(keys.getValue()));
-        return new Wallet(keys.getKey(), keys.getValue());
+    public void generateWallet(final String publicKey, final String privateKey) {
+        if (this.userWallet == null) {
+            this.userWallet = new Wallet(publicKey, privateKey);
+        }
+    }
+
+    public boolean removeWallet() {
+        if (userWallet == null) return false;
+        else userWallet = null;
+        return true;
     }
 
     public List<Block> selectBlocks() {
@@ -99,8 +115,8 @@ public class BlockChain {
         return UTXOsList;
     }
 
-    public Wallet getWallet(final String publicKey, final String privateKey) {
-        return new Wallet(publicKey, privateKey);
+    public Wallet getUserWallet() {
+        return this.userWallet;
     }
 
     public Block generateBlock() {
@@ -111,13 +127,20 @@ public class BlockChain {
         return newBlock;
     }
 
+    public Transaction createTransaction(final String recipientPublicKeyString, final Long amount) {
+        final PublicKey recipientPublicKey = BlockChainUtils.decodePublicKey(BlockChainUtils.getKeyBytesFromString(recipientPublicKeyString));
+        final Transaction transaction = this.userWallet.generateTransaction(recipientPublicKey, amount);
+        if (mineMode) waitTransactions.add(transaction);
+        return transaction;
+    }
+
     public Block mineBlock(final Block block) {
         final String target = BlockChainUtils.getDifficultyString(this.difficulty);
-        while (!block.getHash().substring(0, this.difficulty).equals(target) && mineMode) {
+        while (!block.getHash().substring(0, this.difficulty).equals(target) && this.mineMode) {
             block.incrementNonce();
             block.calculateHash();
         }
-        if (mineMode) {
+        if (this.mineMode) {
             System.out.println("> Block Mined!!! : " + block.getHash());
             return block;
         }
@@ -134,7 +157,92 @@ public class BlockChain {
     }
 
     private String getPathsByDir(final String dir) {
-        return parentFolderDir + dir;
+        return this.parentFolderDir + dir;
+    }
+
+    public synchronized boolean validateBlock(final Block block) {
+        this.blockChain.add(block);
+        if (isChainValid()) return true;
+        else this.blockChain.remove(this.blockChain.size() - 1);
+        return false;
+    }
+
+    private boolean isChainValid() {
+        Block currentBlock;
+        Block previousBlock;
+        String hashTarget = new String(new char[difficulty]).replace('\0', '0');
+        HashMap<String, TransactionOutput> tempUTXOs = new HashMap<>();
+        final Transaction zeroTransaction = blockChain.get(0).getTransactions().get(0);
+        final TransactionOutput zeroTransactionOutput = zeroTransaction.getOutputs().get(0);
+        tempUTXOs.put(zeroTransactionOutput.getId(), zeroTransactionOutput);
+
+        for (int i = 1; i < this.blockChain.size(); i++) {
+
+            currentBlock = blockChain.get(i);
+            previousBlock = blockChain.get(i - 1);
+
+            if (!currentBlock.getHash().equals(currentBlock.calculateHash())) {
+                System.out.println("#Current Hashes not equal");
+                return false;
+            }
+
+            if (!previousBlock.getHash().equals(currentBlock.getPreviousHash())) {
+                System.out.println("#Previous Hashes not equal");
+                return false;
+            }
+
+            if (!currentBlock.getHash().substring(0, difficulty).equals(hashTarget)) {
+                System.out.println("#This block hasn't been mined");
+                return false;
+            }
+
+            TransactionOutput tempOutput;
+            for (int t = 0; t < currentBlock.getTransactions().size(); t++) {
+                Transaction currentTransaction = currentBlock.getTransactions().get(t);
+
+                if (!currentTransaction.verifySignature()) {
+                    System.out.println("#Signature on Transaction(" + t + ") is Invalid");
+                    return false;
+                }
+                if (!currentTransaction.getInputsAmount().equals(currentTransaction.getOutputsAmount())) {
+                    System.out.println("#Inputs are note equal to outputs on Transaction(" + t + ")");
+                    return false;
+                }
+
+                for (TransactionInput input : currentTransaction.getInputs()) {
+                    tempOutput = tempUTXOs.get(input.getTransactionOutputId());
+
+                    if (tempOutput == null) {
+                        System.out.println("#Referenced input on Transaction(" + t + ") is Missing");
+                        return false;
+                    }
+
+                    if (!input.getUTXO().getAmount().equals(tempOutput.getAmount())) {
+                        System.out.println("#Referenced input Transaction(" + t + ") value is Invalid");
+                        return false;
+                    }
+
+                    tempUTXOs.remove(input.getTransactionOutputId());
+                }
+
+                for (TransactionOutput output : currentTransaction.getOutputs()) {
+                    tempUTXOs.put(output.getId(), output);
+                }
+
+                if (currentTransaction.getOutputs().get(0).getRecipient() != currentTransaction.getRecipient()) {
+                    System.out.println("#Transaction(" + t + ") output reciepient is not who it should be");
+                    return false;
+                }
+                if (currentTransaction.getOutputs().get(1).getRecipient() != currentTransaction.getSender()) {
+                    System.out.println("#Transaction(" + t + ") output 'change' is not sender.");
+                    return false;
+                }
+
+            }
+
+        }
+        System.out.println("Blockchain is valid");
+        return true;
     }
 
 //    public static void main(String[] args) {

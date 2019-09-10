@@ -71,4 +71,12 @@ public class Wallet {
 
         return newTransaction;
     }
+
+    public PublicKey getPublicKey() {
+        return publicKey;
+    }
+
+    public PrivateKey getPrivateKey() {
+        return privateKey;
+    }
 }

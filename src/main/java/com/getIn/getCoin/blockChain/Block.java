@@ -54,17 +54,14 @@ public class Block {
         return new BlockDto(this.hash, this.blockHeader.toBlockHeaderDto(), transactionDtos);
     }
 
-    public String getHash() {
-        return hash;
-    }
-
     public void incrementNonce() {
         this.blockHeader.incrementNonce();
     }
 
-    public void calculateHash() {
+    public String calculateHash() {
         final String blockHeaderJson = BlockChainUtils.serializeObjectToString(this.blockHeader.toBlockHeaderJson());
         this.hash = BlockChainUtils.getHash(blockHeaderJson);
+        return this.hash;
     }
 
     private List<Transaction> addTransaction(final List<Transaction> transactions) {
@@ -79,6 +76,18 @@ public class Block {
         }
         System.out.println("Transaction Successfully added to Block");
         return true;
+    }
+
+    public String getHash() {
+        return hash;
+    }
+
+    public String getPreviousHash() {
+        return this.blockHeader.getPreviousHash();
+    }
+
+    public List<Transaction> getTransactions() {
+        return transactions;
     }
 
     private class BlockHeader {
@@ -127,6 +136,10 @@ public class Block {
 
         public void incrementNonce() {
             nonce++;
+        }
+
+        public String getPreviousHash() {
+            return previousHash;
         }
     }
 }

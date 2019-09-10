@@ -67,4 +67,8 @@ public class TransactionOutput {
     public Long getAmount() {
         return amount;
     }
+
+    public PublicKey getRecipient() {
+        return recipient;
+    }
 }

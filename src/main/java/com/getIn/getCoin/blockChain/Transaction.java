@@ -166,4 +166,19 @@ public class Transaction {
         return transactionId;
     }
 
+    public List<TransactionInput> getInputs() {
+        return inputs;
+    }
+
+    public List<TransactionOutput> getOutputs() {
+        return outputs;
+    }
+
+    public PublicKey getRecipient() {
+        return recipient;
+    }
+
+    public PublicKey getSender() {
+        return sender;
+    }
 }
