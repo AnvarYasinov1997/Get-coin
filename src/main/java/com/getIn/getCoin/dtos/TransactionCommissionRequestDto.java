@@ -2,20 +2,20 @@ package com.getIn.getCoin.dtos;
 
 public class TransactionCommissionRequestDto {
 
-    private Long commissionAmount;
+    private Integer commissionAmount;
 
     public TransactionCommissionRequestDto() {
     }
 
-    public TransactionCommissionRequestDto(final Long commissionAmount) {
+    public TransactionCommissionRequestDto(final Integer commissionAmount) {
         this.commissionAmount = commissionAmount;
     }
 
-    public Long getCommissionAmount() {
+    public Integer getCommissionAmount() {
         return commissionAmount;
     }
 
-    public void setCommissionAmount(final Long commissionAmount) {
+    public void setCommissionAmount(final Integer commissionAmount) {
         this.commissionAmount = commissionAmount;
     }
 }

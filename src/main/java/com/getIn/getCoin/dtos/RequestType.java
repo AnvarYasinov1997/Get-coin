@@ -1,0 +1,5 @@
+package com.getIn.getCoin.dtos;
+
+public enum RequestType {
+    INITIALIZE, CONFIRM_BLOCK, UPDATE_NETWORK_NODES, CHECK_TRANSACTION_COMMISSION, ADD_TRANSACTION
+}

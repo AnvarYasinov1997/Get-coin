@@ -37,7 +37,7 @@ public class Wallet {
 
     public Long getBalance() {
         Long total = 0L;
-        for (Map.Entry<String, TransactionOutput> item : BlockChain.UTXOs.entrySet()) {
+        for (Map.Entry<String, TransactionOutput> item : BlockChainImpl.UTXOs.entrySet()) {
             final TransactionOutput UTXO = item.getValue();
             if (UTXO.isMine(this.publicKey)) {
                 this.UTXOs.put(UTXO.getId(), UTXO);
@@ -47,7 +47,8 @@ public class Wallet {
         return total;
     }
 
-    public Transaction generateTransaction(final PublicKey recipient, final Long amount) {
+    public Transaction generateTransaction(final PublicKey recipient,
+                                           final Long amount) {
         if (getBalance() < amount) {
             System.out.println("> Not Enough funds to send transaction. Transaction Discarded.");
             return null;

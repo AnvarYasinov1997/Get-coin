@@ -15,17 +15,17 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.stream.Collectors;
 
-public class BlockChain {
+public class BlockChainImpl implements ClientBlockChain, ServerBlockChain, BlockChainClientRunner, BlockChainMainServerRunner {
 
-    private static BlockChain blockChainInstance = null;
+    public static final Map<String, TransactionOutput> UTXOs = new HashMap<>();
+
+    private static BlockChainImpl blockChainImplInstance = null;
 
     private static final String ROOT_DIR = "/Getcoin";
 
     private static final String BLOCK_CHAIN_DIR = ROOT_DIR + "/Blockchain";
 
     private static final String UTXOS_JSON = ROOT_DIR + "/UTXOs.json";
-
-    public static final Map<String, TransactionOutput> UTXOs = new HashMap<>();
 
     public static Long minimumTransactionAmount = 1L;
 
@@ -39,7 +39,7 @@ public class BlockChain {
 
     private final List<Block> blockChain;
 
-    private Long minimalCommissionAmount;
+    private Integer minimalCommissionAmount;
 
     private final SynchronizedArrayQueue<Transaction> waitTransactionsQueue;
 
@@ -49,7 +49,9 @@ public class BlockChain {
 
     public BlockingQueue<Boolean> updateMiningSynchronousQueue = new SynchronousQueue<>();
 
-    private BlockChain(final String parentFolderDir, final String userPublicKey, final Long minimalCommissionAmount) {
+    private BlockChainImpl(final String parentFolderDir,
+                           final String userPublicKey,
+                           final Integer minimalCommissionAmount) {
         this.userPublicKey = BlockChainUtils.decodePublicKey(BlockChainUtils.getKeyBytesFromString(userPublicKey));
         this.parentFolderDir = parentFolderDir;
         this.blockChain = new ArrayList<>();
@@ -61,16 +63,42 @@ public class BlockChain {
         Security.addProvider(new BouncyCastleProvider());
     }
 
-    public static BlockChain getInstance(final String parentFolderDir, final Long minerCommissionAmount, final String userPublicKey) {
-        if (blockChainInstance != null) {
-            return blockChainInstance;
-        } else return new BlockChain(parentFolderDir, userPublicKey, minerCommissionAmount);
+    public static BlockChainImpl getInstance(final String parentFolderDir,
+                                             final Integer minerCommissionAmount,
+                                             final String userPublicKey) {
+        if (blockChainImplInstance != null) {
+            return blockChainImplInstance;
+        } else return new BlockChainImpl(parentFolderDir, userPublicKey, minerCommissionAmount);
     }
 
+    public List<Block> selectBlocks() {
+        return this.blockChain;
+    }
+
+    public List<TransactionOutput> selectUTXOs() {
+        final List<TransactionOutput> UTXOsList = new ArrayList<>();
+        for (final Map.Entry<String, TransactionOutput> it : UTXOs.entrySet()) {
+            UTXOsList.add(it.getValue());
+        }
+        return UTXOsList;
+    }
+
+    @Override
+    public Integer getCommission() {
+        return this.minimalCommissionAmount;
+    }
+
+    @Override
+    public String getPublicKey() {
+        return BlockChainUtils.getStringFromKey(this.userPublicKey);
+    }
+
+    @Override
     public void uploadBlockChainFromServerData(final List<Block> blockChain) {
         this.blockChain.addAll(blockChain);
     }
 
+    @Override
     public void uploadBlockChain() {
         final List<File> blockFiles = BlockChainUtils.getBlocksFromDir(getPathsByDir(BLOCK_CHAIN_DIR));
         final List<String> blockContents = blockFiles.stream().map(File::getPath).map(BlockChainUtils::getFileContent).collect(Collectors.toList());
@@ -86,6 +114,7 @@ public class BlockChain {
         }
     }
 
+    @Override
     public void generateNewWallet() {
         if (this.userWallet == null) {
             final Pair<PublicKey, PrivateKey> keys = Wallet.createNewWallet();
@@ -95,38 +124,31 @@ public class BlockChain {
         }
     }
 
+    @Override
     public void generateWallet(final String publicKey, final String privateKey) {
         if (this.userWallet == null) {
             this.userWallet = new Wallet(publicKey, privateKey);
         }
     }
 
+    @Override
     public boolean removeWallet() {
         if (userWallet == null) return false;
         else userWallet = null;
         return true;
     }
 
-    public List<Block> selectBlocks() {
-        return this.blockChain;
-    }
-
-    public List<TransactionOutput> selectUTXOs() {
-        final List<TransactionOutput> UTXOsList = new ArrayList<>();
-        for (final Map.Entry<String, TransactionOutput> it : UTXOs.entrySet()) {
-            UTXOsList.add(it.getValue());
-        }
-        return UTXOsList;
-    }
-
+    @Override
     public Wallet getUserWallet() {
         return this.userWallet;
     }
 
-    public boolean checkMinerCommissionAmount(final Long requestCommissionAmount) {
+    @Override
+    public boolean checkMinerCommissionAmount(final Integer requestCommissionAmount) {
         return this.minimalCommissionAmount < requestCommissionAmount;
     }
 
+    @Override
     public boolean checkMinerCommissionOutputTransaction(final Transaction transaction) {
         for (TransactionOutput output : transaction.getOutputs()) {
             if (output.getRecipient().equals(this.userPublicKey)) return true;
@@ -134,10 +156,25 @@ public class BlockChain {
         return false;
     }
 
+    @Override
     public void addTransaction(final Transaction transaction) {
         this.waitTransactionsQueue.add(transaction);
     }
 
+    @Override
+    public synchronized void validateBlock(final Block block) throws Exception {
+        this.blockChain.add(block);
+        if (isChainValid()) {
+            if (mineMode) {
+                this.disableMineMode();
+                this.updateMiningSynchronousQueue.take();
+                this.enableMineMode();
+                this.mineBlock(this.generateBlock());
+            }
+        } else this.blockChain.remove(this.blockChain.size() - 1);
+    }
+
+    @Override
     public Block generateBlock() {
         final Block previousBlock = this.blockChain.get(this.blockChain.size() - 1);
         this.cacheTransactions = this.waitTransactionsQueue.takeAllAndClear();
@@ -146,6 +183,7 @@ public class BlockChain {
         return new Block(previousBlock.getHash(), this.userPublicKey, winnerTransferAmount, transactions);
     }
 
+    @Override
     public Transaction createTransaction(final String recipientPublicKeyString, final Long amount) {
         final PublicKey recipientPublicKey = BlockChainUtils.decodePublicKey(BlockChainUtils.getKeyBytesFromString(recipientPublicKeyString));
         final Transaction transaction = this.userWallet.generateTransaction(recipientPublicKey, amount);
@@ -153,7 +191,11 @@ public class BlockChain {
         return transaction;
     }
 
+    @Override
     public Block mineBlock(final Block block) throws Exception {
+        if (!this.mineMode) {
+            System.out.println("> Enable mine mode before start mining!!!");
+        }
         final String target = BlockChainUtils.getDifficultyString(this.difficulty);
         while (!block.getHash().substring(0, this.difficulty).equals(target) && this.mineMode) {
             block.incrementNonce();
@@ -170,28 +212,18 @@ public class BlockChain {
         return null;
     }
 
+    @Override
     public void enableMineMode() {
         this.mineMode = true;
     }
 
+    @Override
     public void disableMineMode() {
         this.mineMode = false;
     }
 
     private String getPathsByDir(final String dir) {
         return this.parentFolderDir + dir;
-    }
-
-    public synchronized void validateBlock(final Block block) throws Exception {
-        this.blockChain.add(block);
-        if (isChainValid()) {
-            if (mineMode) {
-                this.disableMineMode();
-                this.updateMiningSynchronousQueue.take();
-                this.enableMineMode();
-                this.mineBlock(this.generateBlock());
-            }
-        } else this.blockChain.remove(this.blockChain.size() - 1);
     }
 
     private boolean isChainValid() {
@@ -321,7 +353,7 @@ public class BlockChain {
 //        transaction.getOutputs().add(new TransactionOutput(transaction.getRecipient(), transaction.getTransactionId(), transaction.getAmount()));
 //        UTXOs.put(transaction.getOutputs().get(0).getId(), transaction.getOutputs().get(0));
 //        Block zeroBlock = new Block("0", Collections.singletonList(transaction));
-//        BlockChain chain = BlockChain.getInstance("/home/anvar");
+//        BlockChainClientImpl chain = BlockChainClientImpl.getInstance("/home/anvar");
 //        chain.mineBlock(zeroBlock);
 //        final String result = BlockChainUtils.serializeObjectToString(zeroBlock.toBlockJson());
 //        final Map<String, TransactionOutputJson> jsonsMap = new HashMap<>();

@@ -2,7 +2,7 @@ package com.getIn.getCoin.mainServer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.getIn.getCoin.blockChain.Block;
-import com.getIn.getCoin.blockChain.BlockChain;
+import com.getIn.getCoin.blockChain.BlockChainClientImpl;
 import com.getIn.getCoin.blockChain.TransactionOutput;
 import com.getIn.getCoin.dtos.*;
 
@@ -21,7 +21,7 @@ class MainServer {
 
     private static final String DEFAULT_PARENT_FOLDER_DIR = "/home/anvar";
 
-    private final BlockChain blockChain;
+    private final BlockChainClientImpl blockChainImpl;
 
     private final ServerSocket serverSocket;
 
@@ -39,7 +39,7 @@ class MainServer {
     }
 
     public MainServer(final String serverPort) throws IOException {
-        this.blockChain = BlockChain.getInstance(DEFAULT_PARENT_FOLDER_DIR, 5L, "MEkwEwYHKoZIzj0CAQYIKoZIzj0DAQEDMgAEKaSFwrg4CcRxtC3o4XnD08xLrDs31HGNM25vwETYQbw6F9QjpKuOyFgQYPMFgA1F");
+        this.blockChainImpl = BlockChainClientImpl.getInstance(DEFAULT_PARENT_FOLDER_DIR, 5, "MEkwEwYHKoZIzj0CAQYIKoZIzj0DAQEDMgAEKaSFwrg4CcRxtC3o4XnD08xLrDs31HGNM25vwETYQbw6F9QjpKuOyFgQYPMFgA1F");
         this.serverSocket = new ServerSocket(Integer.valueOf(serverPort));
         this.executorService = Executors.newFixedThreadPool(usersCount.intValue());
         this.scheduledExecutorService = Executors.newScheduledThreadPool(1);
@@ -47,7 +47,7 @@ class MainServer {
 
     public void startServer() {
         this.scheduledExecutorService.schedule(this::scheduleNetworkNodes, 1000 * 60 * 15, TimeUnit.MILLISECONDS);
-        this.blockChain.uploadBlockChain();
+        this.blockChainImpl.uploadBlockChain();
         System.out.println("> Main server started...");
         consume();
     }
@@ -79,8 +79,8 @@ class MainServer {
                 for (final String it : networkNodes.keySet()) {
                     userDtoList.add(networkNodes.get(it));
                 }
-                final List<BlockDto> blockDtoList = blockChain.selectBlocks().stream().map(Block::toBlockDto).collect(Collectors.toList());
-                final List<TransactionOutputDto> transactionOutputDtoList = blockChain.selectUTXOs().stream().map(TransactionOutput::toTransactionOutputDto).collect(Collectors.toList());
+                final List<BlockDto> blockDtoList = blockChainImpl.selectBlocks().stream().map(Block::toBlockDto).collect(Collectors.toList());
+                final List<TransactionOutputDto> transactionOutputDtoList = blockChainImpl.selectUTXOs().stream().map(TransactionOutput::toTransactionOutputDto).collect(Collectors.toList());
                 final InitializeDto initializeDto = new InitializeDto(userDtoList, blockDtoList, transactionOutputDtoList);
                 final String stringInitializeDto = objectMapper.writeValueAsString(initializeDto);
                 final NetworkNodesDto networkNodesDto = new NetworkNodesDto(stringInitializeDto, "INITIALIZE");

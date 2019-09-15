@@ -87,12 +87,12 @@ public class Transaction {
         }
 
         for (TransactionInput inputs : inputs) {
-            inputs.setUTXO(BlockChain.UTXOs.get(inputs.getTransactionOutputId()));
+            inputs.setUTXO(BlockChainImpl.UTXOs.get(inputs.getTransactionOutputId()));
         }
 
-        if (this.getInputsAmount() < BlockChain.minimumTransactionAmount) {
+        if (this.getInputsAmount() < BlockChainImpl.minimumTransactionAmount) {
             System.out.println("Transaction Inputs too small: " + getInputsAmount());
-            System.out.println("Please enter the amount greater than " + BlockChain.minimumTransactionAmount);
+            System.out.println("Please enter the amount greater than " + BlockChainImpl.minimumTransactionAmount);
             return false;
         }
 
@@ -102,12 +102,12 @@ public class Transaction {
         outputs.add(new TransactionOutput(this.sender, this.transactionId, leftOver));
 
         for (final TransactionOutput outputs : outputs) {
-            BlockChain.UTXOs.put(outputs.getId(), outputs);
+            BlockChainImpl.UTXOs.put(outputs.getId(), outputs);
         }
 
         for (final TransactionInput inputs : inputs) {
             if (inputs.getUTXO() == null) continue;
-            BlockChain.UTXOs.remove(inputs.getUTXO().getId());
+            BlockChainImpl.UTXOs.remove(inputs.getUTXO().getId());
         }
 
         return true;
