@@ -12,6 +12,10 @@ public class TransactionJson {
 
     private String recipient;
 
+    private String processer;
+
+    private Long commissionAmount;
+
     private Long amount;
 
     private List<TransactionInputJson> inputs;
@@ -27,6 +31,8 @@ public class TransactionJson {
                            final byte[] signature,
                            final String sender,
                            final String recipient,
+                           final String processer,
+                           final Long commissionAmount,
                            final Long amount,
                            final List<TransactionInputJson> inputs,
                            final List<TransactionOutputJson> outputs,
@@ -35,6 +41,8 @@ public class TransactionJson {
         this.signature = signature;
         this.sender = sender;
         this.recipient = recipient;
+        this.processer = processer;
+        this.commissionAmount = commissionAmount;
         this.amount = amount;
         this.inputs = inputs;
         this.outputs = outputs;
@@ -71,6 +79,22 @@ public class TransactionJson {
 
     public void setRecipient(String recipient) {
         this.recipient = recipient;
+    }
+
+    public String getProcesser() {
+        return processer;
+    }
+
+    public void setProcesser(String processer) {
+        this.processer = processer;
+    }
+
+    public Long getCommissionAmount() {
+        return commissionAmount;
+    }
+
+    public void setCommissionAmount(Long commissionAmount) {
+        this.commissionAmount = commissionAmount;
     }
 
     public Long getAmount() {

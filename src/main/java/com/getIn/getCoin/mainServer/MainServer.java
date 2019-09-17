@@ -2,7 +2,7 @@ package com.getIn.getCoin.mainServer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.getIn.getCoin.blockChain.Block;
-import com.getIn.getCoin.blockChain.BlockChainClientImpl;
+import com.getIn.getCoin.blockChain.BlockChainImpl;
 import com.getIn.getCoin.blockChain.TransactionOutput;
 import com.getIn.getCoin.dtos.*;
 
@@ -21,7 +21,7 @@ class MainServer {
 
     private static final String DEFAULT_PARENT_FOLDER_DIR = "/home/anvar";
 
-    private final BlockChainClientImpl blockChainImpl;
+    private final BlockChainImpl blockChainImpl;
 
     private final ServerSocket serverSocket;
 
@@ -39,7 +39,7 @@ class MainServer {
     }
 
     public MainServer(final String serverPort) throws IOException {
-        this.blockChainImpl = BlockChainClientImpl.getInstance(DEFAULT_PARENT_FOLDER_DIR, 5, "MEkwEwYHKoZIzj0CAQYIKoZIzj0DAQEDMgAEKaSFwrg4CcRxtC3o4XnD08xLrDs31HGNM25vwETYQbw6F9QjpKuOyFgQYPMFgA1F");
+        this.blockChainImpl = BlockChainImpl.getInstance(DEFAULT_PARENT_FOLDER_DIR, 5, "MEkwEwYHKoZIzj0CAQYIKoZIzj0DAQEDMgAEKaSFwrg4CcRxtC3o4XnD08xLrDs31HGNM25vwETYQbw6F9QjpKuOyFgQYPMFgA1F");
         this.serverSocket = new ServerSocket(Integer.valueOf(serverPort));
         this.executorService = Executors.newFixedThreadPool(usersCount.intValue());
         this.scheduledExecutorService = Executors.newScheduledThreadPool(1);

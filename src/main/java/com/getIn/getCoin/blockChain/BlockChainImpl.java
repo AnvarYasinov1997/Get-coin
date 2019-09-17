@@ -184,9 +184,13 @@ public class BlockChainImpl implements ClientBlockChain, ServerBlockChain, Block
     }
 
     @Override
-    public Transaction createTransaction(final String recipientPublicKeyString, final Long amount) {
+    public Transaction createTransaction(final String recipientPublicKeyString,
+                                         final String processerPublicKeyString,
+                                         final Long amount,
+                                         final Long commissionAmount) {
         final PublicKey recipientPublicKey = BlockChainUtils.decodePublicKey(BlockChainUtils.getKeyBytesFromString(recipientPublicKeyString));
-        final Transaction transaction = this.userWallet.generateTransaction(recipientPublicKey, amount);
+        final PublicKey processerPublicKey = BlockChainUtils.decodePublicKey(BlockChainUtils.getKeyBytesFromString(processerPublicKeyString));
+        final Transaction transaction = this.userWallet.generateTransaction(recipientPublicKey, processerPublicKey, amount, commissionAmount);
         if (mineMode) waitTransactionsQueue.add(transaction);
         return transaction;
     }

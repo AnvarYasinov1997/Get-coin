@@ -2,6 +2,7 @@ package com.getIn.getCoin.userServer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.getIn.getCoin.blockChain.Block;
+import com.getIn.getCoin.blockChain.Transaction;
 import com.getIn.getCoin.dtos.*;
 
 import java.io.*;
@@ -92,6 +93,11 @@ public class NetworkDataProviderImpl implements NetworkDataProvider {
             }
         }
         return responseDtoList;
+    }
+
+    @Override
+    public void sendTransactionToPeers(final Map<String, Transaction> transactionMap) {
+
     }
 
     private String sendCommissionRequest(final UserDto userDto, Integer commission) throws IOException {

@@ -14,6 +14,7 @@ import java.io.*;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -156,17 +157,25 @@ public class PeerToPeerServer {
                     break;
                 }
                 case "--transfer": {
-                    if (arguments.size() == 3) {
-                        final String toWallet = arguments.get(1);
+                    if (arguments.size() == 5) {
+                        final String recipientKeyString = arguments.get(1);
                         final String amount = arguments.get(2);
-                        final List<String> minerKeys =
+                        final String commissionAmount = arguments.get(3);
+                        final String privateKey = arguments.get(4);
+                        final List<TransactionCommissionResponseDto> processers =
                                 this.networkDataProvider.checkCommissionFromPeers(clientBlockChain.getCommission())
                                         .stream()
                                         .filter(TransactionCommissionResponseDto::getStatus)
-                                        .map(TransactionCommissionResponseDto::getPublicKey)
                                         .collect(Collectors.toList());
-                        final Transaction transaction = clientBlockChain.createTransaction(toWallet, Long.valueOf(amount));
-                        transaction.toTransactionDto();
+                        final Map<String, Transaction> transactions = processers.stream().collect(Collectors.toMap(
+                                it -> new StringBuilder().append(it.getPeerHost()).append(":").append(it.getPeerPort()).toString(),
+                                it -> {
+                                    final Transaction transaction = clientBlockChain.createTransaction(recipientKeyString, it.getPublicKey(), Long.valueOf(amount), Long.valueOf(commissionAmount));
+                                    transaction.generateSignature(BlockChainUtils.decodePrivateKey(BlockChainUtils.getKeyBytesFromString(privateKey)));
+                                    return transaction;
+                                }
+                        ));
+                        this.networkDataProvider.sendTransactionToPeers(transactions);
                     } else System.out.println("> Enter a command, \"to\", \"amount\", \"commission\" ");
                     break;
                 }
@@ -227,20 +236,6 @@ public class PeerToPeerServer {
             e.printStackTrace();
             emitter.onComplete();
             throw new RuntimeException();
-        }
-    }
-
-    private void returnResponse(final Socket clientSocket, final String data) {
-        try {
-            try (final BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()))) {
-                bufferedWriter.write(data + "\n");
-                bufferedWriter.flush();
-                System.out.println("Response returned");
-            } finally {
-                if (clientSocket != null) clientSocket.close();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 

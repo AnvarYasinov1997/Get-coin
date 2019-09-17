@@ -12,6 +12,10 @@ public class TransactionDto {
 
     private String recipient;
 
+    private String processer;
+
+    private Long commissionAmount;
+
     private Long amount;
 
     private List<TransactionInputDto> inputs;
@@ -27,6 +31,8 @@ public class TransactionDto {
                           final byte[] signature,
                           final String sender,
                           final String recipient,
+                          final String processer,
+                          final Long commissionAmount,
                           final Long amount,
                           final List<TransactionInputDto> inputs,
                           final List<TransactionOutputDto> outputs,
@@ -35,6 +41,8 @@ public class TransactionDto {
         this.signature = signature;
         this.sender = sender;
         this.recipient = recipient;
+        this.processer = processer;
+        this.commissionAmount = commissionAmount;
         this.amount = amount;
         this.inputs = inputs;
         this.outputs = outputs;
@@ -73,6 +81,22 @@ public class TransactionDto {
         this.recipient = recipient;
     }
 
+    public String getProcesser() {
+        return processer;
+    }
+
+    public void setProcesser(String processer) {
+        this.processer = processer;
+    }
+
+    public Long getCommissionAmount() {
+        return commissionAmount;
+    }
+
+    public void setCommissionAmount(Long commissionAmount) {
+        this.commissionAmount = commissionAmount;
+    }
+
     public Long getAmount() {
         return amount;
     }
@@ -104,5 +128,4 @@ public class TransactionDto {
     public void setSequence(int sequence) {
         this.sequence = sequence;
     }
-
 }

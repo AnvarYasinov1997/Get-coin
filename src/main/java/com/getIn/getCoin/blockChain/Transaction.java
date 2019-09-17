@@ -23,7 +23,11 @@ public class Transaction {
 
     private final PublicKey recipient;
 
+    private final PublicKey processer;
+
     private final Long amount;
+
+    private final Long commissionAmount;
 
     private final List<TransactionInput> inputs;
 
@@ -31,23 +35,29 @@ public class Transaction {
 
     private static int sequence = 0;
 
-    public Transaction(final PublicKey from,
-                       final PublicKey to,
+    public Transaction(final PublicKey sender,
+                       final PublicKey recipient,
+                       final PublicKey processer,
                        final Long amount,
+                       final Long commissionAmount,
                        final List<TransactionInput> inputs) {
-        this.sender = from;
-        this.recipient = to;
+        this.sender = sender;
+        this.recipient = recipient;
+        this.processer = processer;
         this.amount = amount;
+        this.commissionAmount = commissionAmount;
         this.inputs = inputs;
         this.outputs = new ArrayList<>();
     }
 
     public Transaction(final TransactionJson transactionJson) {
         this.amount = transactionJson.getAmount();
+        this.commissionAmount = transactionJson.getCommissionAmount();
         this.signature = transactionJson.getSignature();
         this.transactionId = transactionJson.getTransactionId();
         this.sender = BlockChainUtils.decodePublicKey(BlockChainUtils.getKeyBytesFromString(transactionJson.getSender()));
         this.recipient = BlockChainUtils.decodePublicKey(BlockChainUtils.getKeyBytesFromString(transactionJson.getRecipient()));
+        this.processer = BlockChainUtils.decodePublicKey(BlockChainUtils.getKeyBytesFromString(transactionJson.getProcesser()));
         this.inputs = transactionJson.getInputs().stream().map(TransactionInput::new).collect(Collectors.toList());
         this.outputs = transactionJson.getOutputs().stream().map(TransactionOutput::new).collect(Collectors.toList());
         sequence = transactionJson.getSequence();
@@ -55,10 +65,12 @@ public class Transaction {
 
     public Transaction(final TransactionDto transactionDto) {
         this.amount = transactionDto.getAmount();
+        this.commissionAmount = transactionDto.getCommissionAmount();
         this.signature = transactionDto.getSignature();
         this.transactionId = transactionDto.getTransactionId();
         this.sender = BlockChainUtils.decodePublicKey(BlockChainUtils.getKeyBytesFromString(transactionDto.getSender()));
         this.recipient = BlockChainUtils.decodePublicKey(BlockChainUtils.getKeyBytesFromString(transactionDto.getRecipient()));
+        this.processer = BlockChainUtils.decodePublicKey(BlockChainUtils.getKeyBytesFromString(transactionDto.getProcesser()));
         this.inputs = transactionDto.getInputs().stream().map(TransactionInput::new).collect(Collectors.toList());
         this.outputs = transactionDto.getOutputs().stream().map(TransactionOutput::new).collect(Collectors.toList());
         sequence = transactionDto.getSequence();
@@ -67,38 +79,41 @@ public class Transaction {
     public TransactionJson toTransactionJson() {
         final String senderString  = BlockChainUtils.getStringFromKey(this.sender);
         final String recipientString  = BlockChainUtils.getStringFromKey(this.recipient);
+        final String processerString = BlockChainUtils.getStringFromKey(this.processer);
         final List<TransactionInputJson> transactionInputJsons = this.inputs.stream().map(TransactionInput::toTransactionInputJson).collect(Collectors.toList());
         final List<TransactionOutputJson> transactionOutputJsons = this.outputs.stream().map(TransactionOutput::toTransactionOutputJson).collect(Collectors.toList());
-        return new TransactionJson(this.transactionId, this.signature, senderString, recipientString, this.amount, transactionInputJsons, transactionOutputJsons, sequence);
+        return new TransactionJson(this.transactionId, this.signature, senderString, recipientString, processerString, this.commissionAmount, this.amount, transactionInputJsons, transactionOutputJsons, sequence);
     }
 
     public TransactionDto toTransactionDto() {
         final String senderString = BlockChainUtils.getStringFromKey(this.sender);
         final String recipientString = BlockChainUtils.getStringFromKey(this.recipient);
+        final String processerString = BlockChainUtils.getStringFromKey(this.processer);
         final List<TransactionInputDto> transactionInputDtos = this.inputs.stream().map(TransactionInput::toTransactionInputDto).collect(Collectors.toList());
         final List<TransactionOutputDto> transactionOutputDtos = this.outputs.stream().map(TransactionOutput::toTransactionOutputDto).collect(Collectors.toList());
-        return new TransactionDto(this.transactionId, this.signature, senderString, recipientString, this.amount, transactionInputDtos, transactionOutputDtos, sequence);
+        return new TransactionDto(this.transactionId, this.signature, senderString, recipientString, processerString, this.commissionAmount, this.amount, transactionInputDtos, transactionOutputDtos, sequence);
     }
 
     public boolean processTransaction() {
         if (!verifySignature()) {
-            System.out.println("#Transaction Signature failed to verify");
+            System.out.println("> Transaction Signature failed to verify");
             return false;
         }
 
-        for (TransactionInput inputs : inputs) {
+        for (final TransactionInput inputs : this.inputs) {
             inputs.setUTXO(BlockChainImpl.UTXOs.get(inputs.getTransactionOutputId()));
         }
 
         if (this.getInputsAmount() < BlockChainImpl.minimumTransactionAmount) {
-            System.out.println("Transaction Inputs too small: " + getInputsAmount());
-            System.out.println("Please enter the amount greater than " + BlockChainImpl.minimumTransactionAmount);
+            System.out.println("> Transaction Inputs too small: " + getInputsAmount());
+            System.out.println("> Please enter the amount greater than " + BlockChainImpl.minimumTransactionAmount);
             return false;
         }
 
-        final Long leftOver = this.getInputsAmount() - amount;
+        final Long leftOver = this.getInputsAmount() - this.amount - this.commissionAmount;
         this.transactionId = this.calculateHash();
         outputs.add(new TransactionOutput(this.recipient, this.transactionId, this.amount));
+        outputs.add(new TransactionOutput(this.processer, this.transactionId, this.commissionAmount));
         outputs.add(new TransactionOutput(this.sender, this.transactionId, leftOver));
 
         for (final TransactionOutput outputs : outputs) {

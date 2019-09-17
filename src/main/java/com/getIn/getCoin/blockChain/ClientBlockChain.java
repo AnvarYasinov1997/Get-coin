@@ -13,7 +13,8 @@ public interface ClientBlockChain {
 
     Block generateBlock();
 
-    Transaction createTransaction(final String recipientPublicKeyString, final Long amount);
+    Transaction createTransaction(final String recipientPublicKeyString, final String processerPublicKeyString,
+                                  final Long amount, final Long commissionAmount);
 
     Block mineBlock(final Block block) throws Exception;
 

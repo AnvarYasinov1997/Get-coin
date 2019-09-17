@@ -48,7 +48,9 @@ public class Wallet {
     }
 
     public Transaction generateTransaction(final PublicKey recipient,
-                                           final Long amount) {
+                                           final PublicKey processer,
+                                           final Long amount,
+                                           final Long commissionAmount) {
         if (getBalance() < amount) {
             System.out.println("> Not Enough funds to send transaction. Transaction Discarded.");
             return null;
@@ -60,10 +62,10 @@ public class Wallet {
             TransactionOutput UTXO = item.getValue();
             total += UTXO.getAmount();
             inputs.add(new TransactionInput(UTXO.getId()));
-            if (total > amount) break;
+            if (total > amount + commissionAmount) break;
         }
 
-        final Transaction newTransaction = new Transaction(publicKey, recipient, amount, inputs);
+        final Transaction newTransaction = new Transaction(this.publicKey, recipient, processer, amount, commissionAmount, inputs);
         newTransaction.generateSignature(privateKey);
 
         for (final TransactionInput input : inputs) {
